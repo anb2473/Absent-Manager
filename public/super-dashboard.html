@@ -64,7 +64,7 @@
             display: flex;
             justify-content: space-between;
             font-size: 2rem;
-            padding: 20px 0; /* Reduced vertical padding */
+            padding: 50px 0;
             margin: 0 auto;
             align-items: center; /* Vertically align items in the header */
         }
@@ -128,55 +128,6 @@
             background-size: 1em;
         }
 
-        header {
-            background-color: #5cb85c;
-            display: flex;
-            justify-content: center;
-            transition: transform 0.4s ease-in-out;
-        }
-
-        header:hover {
-            transform: scale(1.05);
-        }
-
-        .items {
-            width: 75%;
-            display: flex;
-            justify-content: space-between;
-            font-size: 2rem;
-            padding: 50px;
-            margin: 0 auto; /* Center the content within the header */
-        }
-
-        .name {
-            color: white;
-            justify-self: flex-end;
-            padding-left: 0; /* Adjust padding */
-            line-height: 0.75;
-        }
-
-        .name span {
-            font-size: 1.5rem;
-        }
-
-        .days-left {
-            color: white;
-            justify-self: flex-start;
-            padding-right: 0; /* Adjust padding */
-            line-height: 0.75;
-        }
-
-        .days-left span {
-            font-size: 1.5rem;
-        }
-
-        .no-days-left {
-            color: #d9534f;
-            justify-self: center;
-            padding: 75px;
-            font-size: 4rem;
-        }
-
         .request {
             padding: 25px;
             display: flex;
@@ -211,16 +162,171 @@
             align-items: center;
             padding: 50px;
         }
+
+        #fname, #lname {
+            padding: 12px 15px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            font-size: 1rem;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        #fname:focus, #lname:focus {
+            border-color: #5cb85c;
+            box-shadow: 0 0 0 3px rgba(92, 184, 92, 0.2);
+            outline: none;
+        }
+
+        /* Submit button styling */
+        input[type="submit"] {
+            background-color: #5cb85c;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+        }
+
+        /* Date input styling */
+        input[type="date"] {
+            padding: 10px 15px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-family: inherit;
+            color: #333;
+            background-color: #f9f9f9;
+        }
+
+        /* Dropdown styling */
+        select {
+            padding: 10px 15px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            appearance: none;
+            background-color: #f9f9f9;
+            background-image: url('data:image/svg+xml;charset=UTF-8,<svg fill="%23333" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 16px;
+        }
+
+        .err {
+            color: #d9534f;
+            font-size: 1.2rem;
+            text-align: center;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
     <header>
         <div class="items">
-            <h1 class="name"><i>Hello,<span><br>NAME</span></i></h1>
+            <h1 class="name"><i>Hello,<span><br>NAME (ROLE)</span></i></h1>
+            <h1 class="days-left">Not Available<span><br>days left</span></h1>
         </div>
     </header>
 
     <main>
+        <div class="bg">
+            <form action="/user/send-request?id=ID_VALUE" onsubmit="submitForm(event)">
+                <label for="days">Days absent:</label>
+                <select name="days" id="days"> </select>
+                <label for="date">Date:</label>
+                <input type="date" id="date" name="date">
+                <label for="supervisor">Supervisor:</label>
+                <input type="fname" id="fname" name="fname">
+                <input type="lname" id="lname" name="lname">
+                <input type="submit" value="Submit">
+            </form>
+
+            <h1 class="err"></h1>
+
+            <script>
+                async function submitForm(event) {    
+                    event.preventDefault();
+                          
+                    const formData = {
+                        days: document.getElementById('days').value,
+                        date: document.getElementById('date').value,
+                        req_fname: document.getElementById('fname').value,
+                        req_lname: document.getElementById('lname').value
+                    };
+                    
+                    fetch('/user/send-request?id=ID_VALUE', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(formData),
+                        redirect: 'follow'
+                    })
+                    .then(async response => {
+                        if (response.redirected) {
+                            // If the response contains a redirect, navigate to that URL
+                            window.location.href = response.url;
+                        } else {
+                            // Handle non-redirect response if needed
+                            const json_data = await response.json();
+
+                            const err = document.querySelector('.err');
+                            err.textContent = json_data['ret'];
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        document.getElementById('err').textContent = 'Submission failed';
+                    });
+                }
+                </script>
+
+            <h1 class="no-days-left" id="no-days-left">You have no days left</h1>
+        </div>
+
+        <script>
+            const daysLeftElement = document.querySelector(".days-left");
+            try {
+                if (daysLeftElement) {
+                    const daysLeftText = daysLeftElement.textContent.split('<span>')[0].trim();
+                    const daysLeft = parseInt(daysLeftText);
+                    if (isNaN(daysLeft)) {
+                        throw new Error("Non int days (NA)");
+                    }
+                    const daysSelect = document.getElementById("days");
+                    const bg = document.querySelector(".bg");
+                    if (daysLeft <= 0) {
+                        const form = document.querySelector('form');
+                        bg.removeChild(form)
+                    }
+                    else {
+                        const warning = document.querySelector(".no-days-left");
+                        bg.removeChild(warning);
+                    }
+
+                    for (let i = 0; i <= daysLeft; i++) { // Changed loop condition to include 0
+                        const option = document.createElement("option");
+                        option.value = i;
+                        option.textContent = i;
+                        daysSelect.appendChild(option);
+                    }
+                } else {
+                    const bg = document.querySelector(".bg");
+                    const form = document.querySelector('form');
+                    bg.removeChild(form)
+                }
+            }
+            catch (err) {
+                console.log(err)
+                const bg = document.querySelector(".bg");
+                const form = document.querySelector('form');
+                bg.removeChild(form)
+                const warning = document.getElementById("no-days-left");
+                warning.textContent = "Failed to load your days off, try reloading the page. If the error persists, contact tech."
+                warning.style.fontSize = "1.5rem"
+            }
+        </script>
+
         <div class="centered">
             <h1>All Requests</h1>
 
@@ -238,7 +344,7 @@
     
                     const button = document.getElementById(`${id_num}b`)
                     const p = document.getElementById(`${id_num}p`)
-    
+
                     const main = document.getElementById(`request${id_num}`);
     
                     main.removeChild(button);
@@ -246,26 +352,55 @@
                     p.style.color = "#d9534f";
     
                     const success = document.getElementById("success")
-    
-                    ret = await fetch('/user/user-verify?id=ID_VALUE', {
+
+                    fetch('/user/send-request?id=ID_VALUE', {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json',
+                            'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({id: id_num, userfname: 'HR', userlname: 'user'}),
-                    }).then(response => {
-                        console.log(response)
-                        if (!response.ok) {
-                            return response.json().catch(() => ({ ret: "Failed to finish task due to a server error." }));
-                        }
-                        return response.json();
+                        body: JSON.stringify({id: id_num}),
+                        redirect: 'follow'
                     })
-                    .then(data => {
-                        success.textContent = data['ret'];
+                    .then(async response => {
+                        if (response.redirected) {
+                            // If the response contains a redirect, navigate to that URL
+                            window.location.href = response.url;
+                        } else {
+                            // Handle non-redirect response if needed
+                            const json_data = await response.json();
+
+                            success.textContent = json_data['ret'];
+                            if (success.textContent.startsWith('Success')) {
+                                success.style.color = '#5cb85c'; // Green for success
+                            } else {
+                                success.style.color = '#d9534f'; // Red for error
+                            }
+                        }
                     })
                     .catch(error => {
-                        success.textContent = `Failed to finish task due to an unforseen error. (${error})`;
+                        console.error('Error:', error);
+                        success.textContent = 'Submission failed';
                     });
+    
+                    // ret = await fetch('/user/user-verify?id=ID_VALUE', {
+                    //     method: 'POST',
+                    //     headers: {
+                    //         'Content-Type': 'application/json',
+                    //     },
+                    //     body: JSON.stringify({id: id_num}),
+                    // }).then(response => {
+                    //     console.log(response)
+                    //     if (!response.ok) {
+                    //         return response.json().catch(() => ({ ret: "Failed to finish task due to a server error." }));
+                    //     }
+                    //     return response.json();
+                    // })
+                    // .then(data => {
+                    //     success.textContent = data['ret'];
+                    // })
+                    // .catch(error => {
+                    //     success.textContent = `Failed to finish task due to an unforseen error. (${error})`;
+                    // });
                 }
             </script>
         </div>

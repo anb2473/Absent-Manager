@@ -58,9 +58,9 @@
             display: flex;
             justify-content: space-between;
             font-size: 2rem;
-            padding: 20px 0; /* Reduced vertical padding */
+            padding: 50px 0;
             margin: 0 auto;
-            align-items: center; /* Vertically align items in the header */
+            align-items: center;
         }
 
         .name {
@@ -121,11 +121,67 @@
             background-position: right 10px center;
             background-size: 1em;
         }
+
+        #fname, #lname {
+            padding: 12px 15px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            font-size: 1rem;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        #fname:focus, #lname:focus {
+            border-color: #5cb85c;
+            box-shadow: 0 0 0 3px rgba(92, 184, 92, 0.2);
+            outline: none;
+        }
+
+        /* Submit button styling */
+        input[type="submit"] {
+            background-color: #5cb85c;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+        }
+
+        /* Date input styling */
+        input[type="date"] {
+            padding: 10px 15px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-family: inherit;
+            color: #333;
+            background-color: #f9f9f9;
+        }
+
+        /* Dropdown styling */
+        select {
+            padding: 10px 15px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            appearance: none;
+            background-color: #f9f9f9;
+            background-image: url('data:image/svg+xml;charset=UTF-8,<svg fill="%23333" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 16px;
+        }
+
+        .err {
+            color: #d9534f;
+            font-size: 1.2rem;
+            text-align: center;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
     <header>
-        <div class="items">+
+        <div class="items">
             <h1 class="name"><i>Hello,<span><br>NAME (ROLE)</span></i></h1>
             <h1 class="days-left">Not Available<span><br>days left</span></h1>
         </div>
@@ -133,7 +189,7 @@
 
     <main>
         <div class="bg">
-            <form action="/auth/send-request" method="post" onsubmit="submitForm()">
+            <form action="/user/send-request?id=ID_VALUE" onsubmit="submitForm(event)">
                 <label for="days">Days absent:</label>
                 <select name="days" id="days"> </select>
                 <label for="date">Date:</label>
@@ -144,10 +200,12 @@
                 <input type="submit" value="Submit">
             </form>
 
+            <h1 class="err" id="err"></h1>
+
             <script>
-                async function submitForm(event) {
+                async function submitForm(event) {    
                     event.preventDefault();
-                    
+                          
                     const formData = {
                         days: document.getElementById('days').value,
                         date: document.getElementById('date').value,
@@ -155,13 +213,35 @@
                         req_lname: document.getElementById('lname').value
                     };
                     
-                    await fetch('/user/send-request', {
+                    fetch('/user/send-request?id=ID_VALUE', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify(formData),
+                        redirect: 'follow'
                     })
+                    .then(async response => {
+                        if (response.redirected) {
+                            // If the response contains a redirect, navigate to that URL
+                            window.location.href = response.url;
+                        } else {
+                            // Handle non-redirect response if needed
+                            const json_data = await response.json();
+
+                            const err = document.getElementById('err');
+                            err.textContent = json_data['ret'];
+                            if (err.textContent.startsWith('Success')) {
+                                err.style.color = '#5cb85c'; // Green for success
+                            } else {
+                                err.style.color = '#d9534f'; // Red for error
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        document.getElementById('err').textContent = 'Submission failed';
+                    });
                 }
                 </script>
 
