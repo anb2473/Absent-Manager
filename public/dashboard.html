@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background-color: #f4f4f4;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .bg {
+            justify-self: center;
+            border: 1px solid #ccc;
+            box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.3);
+            padding: 30px; /* Increased padding for better spacing */
+            transform: translateY(20vh);
+            width: 75%;
+            background-color: white;
+            border-radius: 20px;
+            transition: transform 0.4s ease-in-out;
+            display: flex; /* Use flexbox to arrange form elements */
+            flex-direction: column; /* Stack form elements vertically */
+            gap: 15px; /* Add some space between form elements */
+        }
+
+        .bg:hover {
+            transform: translateY(20vh) scale(1.05);
+        }
+
+        header {
+            background-color: #5cb85c;
+            display: flex;
+            justify-content: center;
+            transition: transform 0.4s ease-in-out;
+        }
+
+        header:hover {
+            transform: scale(1.05);
+        }
+
+        .items {
+            width: 75%;
+            display: flex;
+            justify-content: space-between;
+            font-size: 2rem;
+            padding: 20px 0; /* Reduced vertical padding */
+            margin: 0 auto;
+            align-items: center; /* Vertically align items in the header */
+        }
+
+        .name {
+            color: white;
+            justify-self: flex-end;
+            padding-left: 0;
+            line-height: 0.75;
+        }
+
+        .name span {
+            font-size: 1.5rem;
+        }
+
+        .days-left {
+            color: white;
+            justify-self: flex-start;
+            padding-right: 0;
+            line-height: 0.75;
+            text-align: right;
+        }
+
+        .days-left span {
+            font-size: 1.5rem;
+        }
+
+        .no-days-left {
+            color: #d9534f;
+            justify-self: center;
+            padding: 30px; /* Adjusted padding */
+            font-size: 2rem; /* Slightly reduced font size */
+            text-align: center;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px; /* Space between labels and inputs */
+        }
+
+        label {
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #333;
+        }
+
+        input[type="date"],
+        select {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+
+        select {
+            appearance: none; /* Remove default arrow */
+            background-image: url('data:image/svg+xml;charset=UTF-8,<svg fill="%23333" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 1em;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="items">+
+            <h1 class="name"><i>Hello,<span><br>NAME (ROLE)</span></i></h1>
+            <h1 class="days-left">Not Available<span><br>days left</span></h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="bg">
+            <form action="/auth/send-request" method="post" onsubmit="submitForm()">
+                <label for="days">Days absent:</label>
+                <select name="days" id="days"> </select>
+                <label for="date">Date:</label>
+                <input type="date" id="date" name="date">
+                <label for="supervisor">Supervisor:</label>
+                <input type="fname" id="fname" name="fname">
+                <input type="lname" id="lname" name="lname">
+                <input type="submit" value="Submit">
+            </form>
+
+            <script>
+                async function submitForm(event) {
+                    event.preventDefault();
+                    
+                    const formData = {
+                        days: document.getElementById('days').value,
+                        date: document.getElementById('date').value,
+                        req_fname: document.getElementById('fname').value,
+                        req_lname: document.getElementById('lname').value
+                    };
+                    
+                    await fetch('/user/send-request', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(formData),
+                    })
+                }
+                </script>
+
+            <h1 class="no-days-left" id="no-days-left">You have no days left</h1>
+        </div>
+
+        <script>
+            const daysLeftElement = document.querySelector(".days-left");
+            try {
+                if (daysLeftElement) {
+                    const daysLeftText = daysLeftElement.textContent.split('<span>')[0].trim();
+                    const daysLeft = parseInt(daysLeftText);
+                    if (isNaN(daysLeft)) {
+                        throw new Error("Non int days (NA)");
+                    }
+                    const daysSelect = document.getElementById("days");
+                    const bg = document.querySelector(".bg");
+                    if (daysLeft <= 0) {
+                        const form = document.querySelector('form');
+                        bg.removeChild(form)
+                    }
+                    else {
+                        const warning = document.querySelector(".no-days-left");
+                        bg.removeChild(warning);
+                    }
+
+                    for (let i = 0; i <= daysLeft; i++) { // Changed loop condition to include 0
+                        const option = document.createElement("option");
+                        option.value = i;
+                        option.textContent = i;
+                        daysSelect.appendChild(option);
+                    }
+                } else {
+                    const bg = document.querySelector(".bg");
+                    const form = document.querySelector('form');
+                    bg.removeChild(form)
+                }
+            }
+            catch (err) {
+                console.log(err)
+                const bg = document.querySelector(".bg");
+                const form = document.querySelector('form');
+                bg.removeChild(form)
+                const warning = document.getElementById("no-days-left");
+                warning.textContent = "Failed to load your days off, try reloading the page. If the error persists, contact tech."
+                warning.style.fontSize = "1.5rem"
+            }
+        </script>
+    </main>
+</body>
+</html>

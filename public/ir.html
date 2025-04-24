@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invalid Request</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+        }
+
+        .bg {
+            justify-self: center;
+            border: 1px solid #ccc; /* Optional: Add a visible border as well */
+            box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.3); /* Horizontal offset, Vertical offset, Blur radius, Spread radius (optional), Color */
+            padding: 20px; /* Add some padding inside the div for content */
+            transform: translateY(50%);
+            width: 50%; /* Example width */
+            background-color: white;
+            border-radius: 20px;
+            transition: transform 0.4s ease-in-out;
+        }
+
+        .bg:hover {
+            transform: translateY(50%) scale(1.05);
+        }
+
+        .err {
+            color: #d9534f;
+            padding: 100px;
+            padding-top: 80px;
+            padding-left: 70px;
+            padding-bottom: 20px;
+        }
+
+        .subtext {
+            padding-bottom: 80px;
+            padding-left: 70px;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="bg" onclick="window.location.href = '/'">
+        <h1 class="err">Invalid request</h1>
+        <p class="subtext">If you have properly filled out the form and this is a repeated error, please contact tech.</p>
+    </div>
+</body>
+</html>

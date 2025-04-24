@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unauthorized</title>
+    <style>
+        body {
+            overflow-x: hidden;
+        }
+
+        .bg {
+            justify-self: center;
+            justify-content: center;
+            border: 1px solid #ccc; /* Optional: Add a visible border as well */
+            box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.3); /* Horizontal offset, Vertical offset, Blur radius, Spread radius (optional), Color */
+            padding: 20px; /* Add some padding inside the div for content */
+            transform: translateY(50%);
+            width: 50%; /* Example width */
+            background-color: white;
+            border-radius: 20px;
+            transition: transform 0.4s ease-in-out;
+        }
+
+        .bg:hover {
+            transform: translateY(50%) scale(1.05);
+        }
+
+        .err {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #d9534f;
+            padding: 100px;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg" onclick="window.location.href = '/'">
+        <h1 class="err">You have been logged out of your account.</h1>
+    </div>
+</body>
+</html>

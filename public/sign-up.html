@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up</title>
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .bubble {
+            position: relative;
+            background-color: #5cb85c; /* A nice green */
+            color: white;
+            border-radius: 50%;
+            width: 150px;
+            height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease-in-out;
+            z-index: 1;
+        }
+
+        .bubble:hover {
+            transform: scale(1.1);
+        }
+
+        .bubble h1 {
+            font-size: 1.5em;
+            text-align: center;
+            margin: 0;
+        }
+
+        form {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            width: 80%;
+            max-width: 400px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        input[type=text] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1em;
+            transition: border-color 0.3s ease-in-out;
+        }
+
+        input[type=text]:focus {
+            outline: none;
+            border-color: #5cb85c;
+            box-shadow: 0 0 5px rgba(92, 184, 92, 0.5);
+        }
+
+        input[type=submit] {
+            background-color: #007bff; /* A nice blue for submit */
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease-in-out;
+        }
+
+        input[type=submit]:hover {
+            background-color: #0056b3;
+        }
+
+        @media (max-width: 600px) {
+            form {
+                width: 95%;
+                padding: 20px;
+            }
+
+            .bubble {
+                width: 120px;
+                height: 120px;
+                margin-bottom: 20px;
+            }
+
+            .bubble h1 {
+                font-size: 1.2em;
+            }
+        }
+
+        #err {
+            color: #d9534f;
+            font-size: 15px;
+            justify-self: center;
+        }
+
+        a {
+            text-decoration: none;
+            color: black;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="bubble">
+        <h1>Sign Up</h1>
+    </div>
+    <!-- onsubmit="redirect(event)"  -->
+    <form id="myForm" action="/auth/send-request" onsubmit="submitForm(event)">
+        <h1 id="err"></h1><br>
+        <label for="fname">First name:</label><br>
+        <input type="text" id="fname" name="fname"><br><br>
+        <label for="lname">Last name:</label><br>
+        <input type="text" id="lname" name="lname"><br><br>
+        <label for="password">Password:</label><br>
+        <input type="text" id="password" name="password"><br><br>
+        <label for="usertype">User type:</label>
+        <select name="usertype" id="usertype">
+            <option value="Supervisor">Supervisor</option>
+            <option value="Faculty">Faculty</option>
+            <option value="Staff">Staff</option>
+        </select>
+        <input type="submit" value="Submit">
+    </form>
+    
+    <script>
+    function submitForm(event) {
+        event.preventDefault();
+        
+        const formData = {
+            fname: document.getElementById('fname').value,
+            lname: document.getElementById('lname').value,
+            password: document.getElementById('password').value,
+            usertype: document.getElementById('usertype').value,
+            req_fname: 'HR',
+            req_lname: 'user'
+        };
+        
+        fetch('/auth/send-request', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData),
+            redirect: 'follow' // This tells fetch to follow redirects
+        })
+        .then(response => {
+            if (response.redirected) {
+                // If the response contains a redirect, navigate to that URL
+                window.location.href = response.url;
+            } else {
+                // Handle non-redirect response if needed
+                console.log('Response:', response);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('err').textContent = 'Submission failed';
+        });
+    }
+    </script>
+
+    <a href="/login">Already have an account? Click here to login.</a>
+</body>
+</html>
