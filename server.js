@@ -33,15 +33,15 @@ app.get('/login', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
 })
 
-app.get('/sign-up', async (req, res) => {
-    // Send sign-up.html to client
-    // (When client requests index.css it will be auto served by express)
-    const filePath = path.join(__dirname, 'public', 'sign-up.html')
-    const fileContent = await fs.readFile(filePath, 'utf8');
-    console.log(fileContent)
-    // res.sendFile(path.join(__dirname, 'public', 'sign-up.html'));
-    res.send(fileContent)
-})
+// app.get('/sign-up', async (req, res) => {
+//     // Send sign-up.html to client
+//     // (When client requests index.css it will be auto served by express)
+//     const filePath = path.join(__dirname, 'public', 'sign-up.html')
+//     const fileContent = await fs.readFile(filePath, 'utf8');
+//     console.log(fileContent)
+//     // res.sendFile(path.join(__dirname, 'public', 'sign-up.html'));
+//     res.send(fileContent)
+// })
 
 app.get('/wait', (req, res) => {
     // Send wait.html to client

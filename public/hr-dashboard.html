@@ -116,11 +116,76 @@
             color: #d9534f
         }
 
+        #success-del {
+            justify-self: center;
+            padding-top: 20px;
+            color: #d9534f
+        }
+
         .centered {
             display: flex;
             flex-direction: column;
             align-items: center;
             padding: 50px;
+        }
+
+        .centered h1 {
+            padding-top: 70px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        input[type=text] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1em;
+            transition: border-color 0.3s ease-in-out;
+        }
+
+        input[type=text]:focus {
+            outline: none;
+            border-color: #5cb85c;
+            box-shadow: 0 0 5px rgba(92, 184, 92, 0.5);
+        }
+
+        input[type=submit] {
+            background-color: #007bff; /* A nice blue for submit */
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease-in-out;
+        }
+
+        input[type=submit]:hover {
+            background-color: #0056b3;
+        }
+
+        #usertype {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #f8f8f8;
+            margin-right: 10px;
+            vertical-align: middle;
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        #err {
+            color: #d9534f;
+            font-size: 15px;
+            justify-self: center;
         }
     </style>
 </head>
@@ -139,7 +204,7 @@
 
                 REQUESTS
 
-            <p id="success"></p>
+                <p id="success"></p>
 
             </div>
 
@@ -165,7 +230,6 @@
                         },
                         body: JSON.stringify({id: id_num, userfname: 'HR', userlname: 'user'}),
                     }).then(response => {
-                        console.log(response)
                         if (!response.ok) {
                             return response.json().catch(() => ({ ret: "Failed to finish task due to a server error." }));
                         }
@@ -179,6 +243,100 @@
                     });
                 }
             </script>
+
+            <h1>Users</h1>
+
+            <div class="bg">
+                USERS
+
+                <p id="success-del"></p>
+
+                <script>
+                    function deleteUser (id) {
+                        event.preventDefault();
+
+                        const id_num = id.replace("b", "");
+
+                        const button = document.getElementById(`${id_num}b`)
+                        const p = document.getElementById(`${id_num}p`)
+        
+                        const main = document.getElementById(`request${id_num}`);
+        
+                        main.removeChild(button);
+                        p.style.textDecoration = 'line-through';
+                        p.style.color = "#d9534f";
+        
+                        const success = document.getElementById("success-del")
+                        
+                        fetch('/user/user-verify?id=ID_VALUE', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({user_id: id_num, req: 'del_user'}),
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                return response.json().catch(() => ({ ret: "Failed to finish task due to a server error." }));
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            success.textContent = data['ret'];
+                        })
+                        .catch(error => {
+                            success.textContent = `Failed to finish task due to an unforseen error. (${error})`;
+                        });
+                    }
+                </script>
+            </div>
+
+            <h1>Add User</h1>
+            
+            <div class="bg">
+                <form action="/user/user-verify?id=ID_VALUE" method="POST" id="myForm" onsubmit="submitForm(event)">
+                    <h1 id="err"></h1><br>
+                    <label for="fname">First name:</label><br>
+                    <input type="text" id="fname" name="fname"><br><br>
+                    <label for="lname">Last name:</label><br>
+                    <input type="text" id="lname" name="lname"><br><br>
+                    <label for="password">Password:</label><br>
+                    <input type="text" id="password" name="password"><br><br>
+                    <label for="usertype">User type:</label>
+                    <select name="usertype" id="usertype">
+                        <option value="Supervisor">Supervisor</option>
+                        <option value="Faculty">Faculty</option>
+                        <option value="Staff">Staff</option>
+                    </select>
+                    <input type="submit" value="Submit">
+                </form>
+
+                <script>
+                    function submitForm(event) {
+                        event.preventDefault();
+                        
+                        const formData = {
+                            req: 'gen_user',
+                            fname: document.getElementById('fname').value,
+                            lname: document.getElementById('lname').value,
+                            password: document.getElementById('password').value,
+                            usertype: document.getElementById('usertype').value,
+                        };
+                        
+                        fetch('/user/user-verify?id=ID_VALUE', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(formData),
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            document.getElementById('err').textContent = 'Submission failed';
+                        });
+                    }
+                </script>
+            </div>
         </div>
     </main>
 </body>

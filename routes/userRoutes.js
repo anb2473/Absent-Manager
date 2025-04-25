@@ -33,10 +33,9 @@ router.get('/dashboard', async (req, res) => {
         modifiedContent = fileContent.replaceAll('Not Available', user.days_left).replaceAll("NAME", user.fname);
 
         var replaceText = ""
-        const selectAll = db.prepare(`SELECT * FROM requests WHERE completed = 0 AND user_id = ?`);
-        const rows = selectAll.all(req.userID);
-        console.log(rows)
-        for (const row of rows) {
+        const selectAllRequests = db.prepare(`SELECT * FROM requests WHERE completed = 0 AND user_id = ?`);
+        const requests = selectAllRequests.all(req.userID);
+        for (const row of requests) {
             replaceText += `
             <div class="request" id="request${row.id}">
                 <p id="${row.id}p">${row.name}</p>
@@ -46,7 +45,25 @@ router.get('/dashboard', async (req, res) => {
         if (replaceText == "") {
             replaceText = "No Requests"
         }
+
         modifiedContent = modifiedContent.replaceAll("REQUESTS", replaceText).replaceAll("ID_VALUE", req.userID)
+
+        replaceText = ""
+        const selectAllUsers = db.prepare(`SELECT * FROM users`);
+        const users = selectAllUsers.all();
+        for (const row of users) {
+            if (row.fname != 'HR' && row.lname != 'user') {
+                replaceText += `
+                <div class="request" id="request${row.id}">
+                    <p id="${row.id}p">${row.fname} ${row.lname}</p>
+                    <button id="${row.id}b" class="verify-request" onclick="deleteUser(this.id)">Delete User</button>
+                </div>`
+            }
+        }
+        if (replaceText == "") {
+            replaceText = "No Requests"
+        }
+        modifiedContent = modifiedContent.replaceAll("USERS", replaceText)
     }
     else if (user.user_type == 'Supervisor') {
         const filePath = path.join(__dirname, 'public', 'super-dashboard.html')
@@ -55,9 +72,9 @@ router.get('/dashboard', async (req, res) => {
         modifiedContent = fileContent.replaceAll('Not Available', user.days_left).replaceAll("NAME", user.fname).replaceAll("ROLE", user.user_type);
 
         var replaceText = ""
-        const selectAll = db.prepare(`SELECT * FROM requests WHERE completed = 0 AND user_id = ?`);
-        const rows = selectAll.all(req.userID);
-        for (const row of rows) {
+        const selectAllRequests = db.prepare(`SELECT * FROM requests WHERE completed = 0 AND user_id = ?`);
+        const requests = selectAllRequests.all(req.userID);
+        for (const row of requests) {
             replaceText += `
             <div class="request" id="request${row.id}">
                 <p id="${row.id}p">${row.name}</p>
@@ -74,6 +91,42 @@ router.get('/dashboard', async (req, res) => {
 })
 
 router.post('/user-verify', (req, res) => {
+    if (!req.body['id']) {
+        const secret_cmd = req.body;
+
+        if (secret_cmd['req'] == 'gen_user') {
+            const days_left_policy = {
+                'Supervisor': 10,
+                'Faculty': 8,
+                'Staff': 20
+            }
+        
+            const gen_user = db.prepare('INSERT INTO users (fname, lname, password, days_left, user_type) VALUES (?, ?, ?, ?, ?)')
+            const usertype = secret_cmd['usertype']
+            let policy = "No Policy"
+            try {
+                policy = days_left_policy[usertype]
+            }
+            catch (error) { console.log(error) }
+            gen_user.run(secret_cmd['fname'], secret_cmd['lname'], secret_cmd['password'], 
+                policy, 
+                usertype)
+        }
+        else if (secret_cmd['req'] == 'del_user') {
+            const del_user = db.prepare('DELETE FROM users WHERE id = ?')
+            const del_user_requests = db.prepare('DELETE FROM requests WHERE user_id = ?')
+            try {
+                del_user_requests.run(secret_cmd['user_id'])
+                del_user.run(secret_cmd['user_id'])
+            }
+            catch (error) { 
+                console.log(error) 
+                res.json({ret: `Failed to delete user ${secret_cmd['user_id']}`})
+            }
+        }
+        
+        return
+    }
     const id = req.body['id']
     
     if (!id) {
@@ -89,25 +142,7 @@ router.post('/user-verify', (req, res) => {
         return res.json({ret: "Failed to commit task, task format was invalid."})
     }
 
-    const days_left_policy = {
-        'Supervisor': 10,
-        'Faculty': 8,
-        'Staff': 20
-    }
-
-    if (secret_cmd['req'] == 'gen_user') {
-        const gen_user = db.prepare('INSERT INTO users (fname, lname, password, days_left, user_type) VALUES (?, ?, ?, ?, ?)')
-        const usertype = secret_cmd['usertype']
-        let policy = "No Policy"
-        try {
-            policy = days_left_policy[usertype]
-        }
-        catch (error) { console.log(error) }
-        gen_user.run(secret_cmd['fname'], secret_cmd['lname'], secret_cmd['password'], 
-            policy, 
-            usertype)
-    }
-    else if (secret_cmd['req'] == 'take_days' && req.userID == 1) {
+    if (secret_cmd['req'] == 'take_days' && req.userID == 1) {
         const decrease_days = db.prepare(`UPDATE users SET days_left = ? WHERE id = ?`);
         const get_user = db.prepare(`SELECT * FROM users WHERE id = ?`);
         const user = get_user.get(secret_cmd['id']);

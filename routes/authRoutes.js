@@ -28,7 +28,6 @@ router.get('/login', async (req, res) => {
                 sameSite: 'strict', // Helps prevent CSRF
                 maxAge: 60 * 60 * 1000 // 1 hour (matches expiresIn)
             });
-            console.log(res.cookie)
             return res.redirect(`/user/dashboard?id=${user.id}`); // Replace '/dashboard' with your target URL
         } else {
             // Auth failure, redirecting to user not found
