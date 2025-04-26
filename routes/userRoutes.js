@@ -26,8 +26,8 @@ async function loadHRDashboard(req, res, user, modifiedContent) {
 
     modifiedContent = fileContent.replaceAll('Not Available', user.days_left).replaceAll("NAME", user.fname);
 
-    var replaceText = ""
-    const selectAllRequests = db.prepare(`SELECT * FROM requests WHERE completed = 0 AND user_id = ?`);
+    let replaceText = ""
+    const selectAllRequests = db.prepare(`SELECT * FROM requests WHERE completed = 0 AND userID = ?`);
     const requests = selectAllRequests.all(req.userID);
     for (const row of requests) {
         replaceText += `
@@ -81,7 +81,7 @@ async function loadHRDashboard(req, res, user, modifiedContent) {
     modifiedContent = modifiedContent.replaceAll("USERS", replaceText)
 
     replaceText = ""
-    const selectAllApprovedRequests = db.prepare(`SELECT * FROM requests WHERE completed = 1 AND user_id = ?`);
+    const selectAllApprovedRequests = db.prepare(`SELECT * FROM requests WHERE completed = 1 AND userID = ?`);
     const approvedRequests = selectAllApprovedRequests.all(req.userID);
     for (const row of approvedRequests) {
         replaceText += `
@@ -103,8 +103,8 @@ async function loadSuperDashboard(req, res, user, modifiedContent) {
 
     modifiedContent = fileContent.replaceAll('Not Available', user.days_left).replaceAll("NAME", user.fname).replaceAll("ROLE", user.user_type);
 
-    var replaceText = ""
-    const selectAllRequests = db.prepare(`SELECT * FROM requests WHERE completed = 0 AND user_id = ?`);
+    let replaceText = ""
+    const selectAllRequests = db.prepare(`SELECT * FROM requests WHERE completed = 0 AND userID = ?`);
     const requests = selectAllRequests.all(req.userID);
     for (const row of requests) {
         replaceText += `
@@ -119,7 +119,7 @@ async function loadSuperDashboard(req, res, user, modifiedContent) {
     modifiedContent = modifiedContent.replaceAll("REQUESTS", replaceText).replaceAll("ID_VALUE", req.userID)
 
     replaceText = ""
-    const selectAllApprovedRequests = db.prepare(`SELECT * FROM requests WHERE completed = 1 AND user_id = ?`);
+    const selectAllApprovedRequests = db.prepare(`SELECT * FROM requests WHERE completed = 1 AND userID = ?`);
     const approvedRequests = selectAllApprovedRequests.all(req.userID);
     for (const row of approvedRequests) {
         replaceText += `
@@ -140,8 +140,8 @@ router.get('/dashboard', async (req, res) => {
         res.redirect("/auth/err/ir")
     }
 
-    const get_user = db.prepare(`SELECT * FROM users WHERE id = ?`)
-    const user = get_user.get(req.userID)
+    const getUser = db.prepare(`SELECT * FROM users WHERE id = ?`)
+    const user = getUser.get(req.userID)
 
     let modifiedContent = "500";
     if (user.user_type != 'HR' && user.user_type != 'Supervisor') {
@@ -157,50 +157,50 @@ router.get('/dashboard', async (req, res) => {
     res.send(modifiedContent);
 })
 
-async function verifyDays(req, res) {
+function verifyDays(req, res) {
     const id = req.body['id']
     
     if (!id) {
         return res.json({ret: "Invalid request"})
     }
 
-    const get_task_data = db.prepare(`SELECT * FROM requests WHERE id = ? AND user_id = ?`)
-    const task_data = get_task_data.get(id, req.userID)
+    const getTaskData = db.prepare(`SELECT * FROM requests WHERE id = ? AND userID = ?`)
+    const taskData = getTaskData.get(id, req.userID)
 
-    const secret_cmd = JSON.parse(task_data['secret_data'])
+    const secretCmd = JSON.parse(taskData['secret_data'])
 
-    if (!secret_cmd || !secret_cmd['req']) {
+    if (!secretCmd || !secretCmd['req']) {
         return res.json({ret: "Failed to commit task, task format was invalid."})
     }
 
-    if (secret_cmd['req'] == 'take_days' && req.userID == 1) {
-        const decrease_days = db.prepare(`UPDATE users SET days_left = ? WHERE id = ?`);
-        const get_user = db.prepare(`SELECT * FROM users WHERE id = ?`);
-        const user = get_user.get(secret_cmd['id']);
+    if (secretCmd['req'] == 'take_days' && req.userID == 1) {
+        const decreaseDays = db.prepare(`UPDATE users SET days_left = ? WHERE id = ?`);
+        const getUser = db.prepare(`SELECT * FROM users WHERE id = ?`);
+        const user = getUser.get(secretCmd['id']);
         const days_left = user.days_left;
         let new_days = NaN;
         if (days_left < 0) {
             return res.json({ret: "Cannot take negative days off"})
         }
-        if (days_left - parseFloat(secret_cmd['days']) >= 0) {
-            new_days = days_left - parseFloat(secret_cmd['days']);
+        if (days_left - parseFloat(secretCmd['days']) >= 0) {
+            new_days = days_left - parseFloat(secretCmd['days']);
         }
         else {
             return res.json({ret: "User does not have enough days left"})
         }
-        decrease_days.run(new_days, secret_cmd['id']);
+        decreaseDays.run(new_days, secretCmd['id']);
     }
 
-    const remove_task = db.prepare(`UPDATE requests SET completed = 1 WHERE id = ? AND user_id = ?`)
-    remove_task.run(id, req.userID)
+    const removeTask = db.prepare(`UPDATE requests SET completed = 1 WHERE id = ? AND userID = ?`)
+    removeTask.run(id, req.userID)
 
     return res.json({ret: ""})
 }
 
-async function handleUsers(req, res) {
-    const secret_cmd = req.body;
+function handleUsers(req, res) {
+    const secretCmd = req.body;
 
-    if (secret_cmd['req'] == 'gen_user') {
+    if (secretCmd['req'] == 'gen_user') {
         const days_left_policy = {
             'Supervisor': 10,
             'Faculty': 8,
@@ -208,31 +208,31 @@ async function handleUsers(req, res) {
         }
     
         const gen_user = db.prepare('INSERT INTO users (fname, lname, password, days_left, user_type) VALUES (?, ?, ?, ?, ?)')
-        const usertype = secret_cmd['usertype']
+        const usertype = secretCmd['usertype']
         let policy = "No Policy"
         try {
             policy = days_left_policy[usertype]
         }
         catch (error) { console.log(error) }
-        gen_user.run(secret_cmd['fname'], secret_cmd['lname'], secret_cmd['password'], 
+        gen_user.run(secretCmd['fname'], secretCmd['lname'], secretCmd['password'], 
             policy, 
             usertype)
     }
-    else if (secret_cmd['req'] == 'del_user') {
+    else if (secretCmd['req'] == 'del_user') {
         const del_user = db.prepare('DELETE FROM users WHERE id = ?')
-        const del_user_requests = db.prepare('DELETE FROM requests WHERE user_id = ?')
+        const del_user_requests = db.prepare('DELETE FROM requests WHERE userID = ?')
         try {
-            del_user_requests.run(secret_cmd['user_id'])
-            del_user.run(secret_cmd['user_id'])
+            del_user_requests.run(secretCmd['userID'])
+            del_user.run(secretCmd['userID'])
         }
         catch (error) { 
             console.log(error) 
-            res.json({ret: `Failed to delete user ${secret_cmd['user_id']}`})
+            res.json({ret: `Failed to delete user ${secretCmd['userID']}`})
         }
     }
-    else if (secret_cmd['req'] == 'put_user') {
+    else if (secretCmd['req'] == 'put_user') {
         const update_user = db.prepare('UPDATE users SET fname = ?, lname = ?, password = ?, user_type = ?, days_left = ? WHERE id = ?')
-        update_user.run(secret_cmd['fname'], secret_cmd['lname'], secret_cmd['password'], secret_cmd['usertype'], secret_cmd['days_left'], secret_cmd['user_id'])
+        update_user.run(secretCmd['fname'], secretCmd['lname'], secretCmd['password'], secretCmd['usertype'], secretCmd['days_left'], secretCmd['userID'])
         res.json({ret: "Successfully updated user"})
     }
 }
@@ -247,29 +247,29 @@ router.post('/user-verify', async (req, res) => {
     await verifyDays(req, res)
 }) 
 
-async function handleDaysRequestFromRequests(req, res) {
-    const get_task = db.prepare(`SELECT * FROM requests WHERE id = ? AND user_id = ?`)
-    const task_data = get_task.get(req.body['id'], req.userID)
-    const task = JSON.parse(task_data['secret_data'])
+function handleDaysRequestFromRequests(req, res) {
+    const getTask = db.prepare(`SELECT * FROM requests WHERE id = ? AND userID = ?`)
+    const taskData = getTask.get(req.body['id'], req.userID)
+    const task = JSON.parse(taskData['secret_data'])
     const days = task['days']
     const date = task['date']
-    const get_user = db.prepare(`SELECT * FROM users WHERE fname = ? AND lname = ?`)
-    const user = get_user.get('HR', 'user');
+    const getUser = db.prepare(`SELECT * FROM users WHERE fname = ? AND lname = ?`)
+    const user = getUser.get('HR', 'user');
     if (user == undefined) {
         return res.json({ret: "Invalid supervisor, please check the name"})
     }
-    const user_id = user.id
+    const userID = user.id
 
-    const get_user_by_id = db.prepare(`SELECT * FROM users WHERE id = ?`)
-    const o_user = get_user_by_id.get(task['id'])
+    const getUserById = db.prepare(`SELECT * FROM users WHERE id = ?`)
+    const originalUser = getUserById.get(task['id'])
     
-    const post_request = db.prepare(`INSERT INTO requests (user_id, name, secret_data) VALUES (?, ?, ?)`)
-    var message = `Request from ${o_user.fname} ${o_user.lname} to take ${days} days off starting from ${date}`;
+    const postRequest = db.prepare(`INSERT INTO requests (userID, name, secret_data) VALUES (?, ?, ?)`)
+    let message = `Request from ${originalUser.fname} ${originalUser.lname} to take ${days} days off starting from ${date}`;
     if (days == 0.5) {
-        message = `Request from ${o_user.fname} ${o_user.lname} to take a half day off on ${date}`
+        message = `Request from ${originalUser.fname} ${originalUser.lname} to take a half day off on ${date}`
     }
-    post_request.run(
-        user_id, 
+    postRequest.run(
+        userID, 
         message, 
         JSON.stringify({
             req: "take_days",
@@ -278,33 +278,33 @@ async function handleDaysRequestFromRequests(req, res) {
             date: date
         }));
 
-    const remove_task = db.prepare(`UPDATE requests SET completed = 1 WHERE id = ? AND user_id = ?`)
-    remove_task.run(req.body['id'], req.userID)
+    const removeTask = db.prepare(`UPDATE requests SET completed = 1 WHERE id = ? AND userID = ?`)
+    removeTask.run(req.body['id'], req.userID)
 
     return res.json({ret: "Successfully sent request"})
 }
 
-async function handleDaysRequest(req, res) {
-    var {days, date, req_fname, req_lname} = req.body
+function handleDaysRequest(req, res) {
+    let {days, date, req_fname, req_lname} = req.body
 
-    const get_user = db.prepare(`SELECT * FROM users WHERE fname = ? AND lname = ?`)
-    const user = get_user.get(req_fname, req_lname);
+    const getUser = db.prepare(`SELECT * FROM users WHERE fname = ? AND lname = ?`)
+    const user = getUser.get(req_fname, req_lname);
     if (user == undefined) {
         return res.json({ret: "Invalid supervisor, please check the name"})
     }
-    const user_id = user.id
+    const userID = user.id
 
-    const get_user_by_id = db.prepare(`SELECT * FROM users WHERE id = ?`)
-    const o_user = get_user_by_id.get(req.userID)
+    const getUserById = db.prepare(`SELECT * FROM users WHERE id = ?`)
+    const originalUser = getUserById.get(req.userID)
     
-    const post_request = db.prepare(`INSERT INTO requests (user_id, name, secret_data) VALUES (?, ?, ?)`)
-    var message = `Request from ${o_user.fname} ${o_user.lname} to take ${days} days off starting from ${date}`;
+    const postRequest = db.prepare(`INSERT INTO requests (userID, name, secret_data) VALUES (?, ?, ?)`)
+    let message = `Request from ${originalUser.fname} ${originalUser.lname} to take ${days} days off starting from ${date}`;
     if (days == 'half') {
-        message = `Request from ${o_user.fname} ${o_user.lname} to take a half day off on ${date}`
+        message = `Request from ${originalUser.fname} ${originalUser.lname} to take a half day off on ${date}`
         days = 0.5
     }
-    post_request.run(
-        user_id, 
+    postRequest.run(
+        userID, 
         message, 
         JSON.stringify({
             req: "take_days",

@@ -213,7 +213,7 @@
             <h1 class="err" id="err"></h1>
 
             <script>
-                async function submitForm(event) {    
+                function submitForm(event) {    
                     event.preventDefault();
                           
                     const formData = {
@@ -237,10 +237,10 @@
                             window.location.href = response.url;
                         } else {
                             // Handle non-redirect response if needed
-                            const json_data = await response.json();
+                            const jsonData = await response.json();
 
                             const err = document.getElementById('err');
-                            err.textContent = json_data['ret'];
+                            err.textContent = jsonData['ret'];
                             if (err.textContent.startsWith('Success')) {
                                 err.style.color = '#5cb85c'; // Green for success
                             } else {

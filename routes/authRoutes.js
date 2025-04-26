@@ -11,7 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __routesdir = dirname(__filename);
 const __dirname = dirname(__routesdir);
 
-router.get('/login', async (req, res) => {
+router.get('/login', (req, res) => {
     try {
         const {fname, lname, password} = req.query;
 
@@ -40,29 +40,6 @@ router.get('/login', async (req, res) => {
         console.log(error)
         res.redirect("err/ir")
     }
-})
-
-router.post('/send-request', (req, res) => {
-    const {fname, lname, password, usertype, req_fname, req_lname} = req.body
-
-    // Pull up target user
-    const get_user = db.prepare(`SELECT * FROM users WHERE fname = ? AND lname = ?`)
-    const user = get_user.get(req_fname, req_lname);
-    const user_id = user.id
-    
-    // Add request to users requests
-    const post_request = db.prepare(`INSERT INTO requests (user_id, name, secret_data) VALUES (?, ?, ?)`)
-    post_request.run(
-        user_id, 
-        `Request to create new ${usertype} account for ${fname} ${lname}`, 
-        JSON.stringify({
-            req: "gen_user",
-            usertype: usertype,
-            fname: fname,
-            lname: lname,
-            password: password
-        }));
-    res.redirect('/wait')
 })
 
 // Error pages

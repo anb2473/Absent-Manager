@@ -253,12 +253,12 @@
 
             <script>
                 async function execRequest(id) {
-                    const id_num = id.replace("b", "");
+                    const idNum = id.replace("b", "");
     
-                    const button = document.getElementById(`${id_num}b`)
-                    const p = document.getElementById(`${id_num}p`)
+                    const button = document.getElementById(`${idNum}b`)
+                    const p = document.getElementById(`${idNum}p`)
     
-                    const main = document.getElementById(`request${id_num}`);
+                    const main = document.getElementById(`request${idNum}`);
     
                     main.removeChild(button);
                     p.style.textDecoration = 'line-through';
@@ -271,7 +271,7 @@
                         headers: {
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({id: id_num, userfname: 'HR', userlname: 'user'}),
+                        body: JSON.stringify({id: idNum, userfname: 'HR', userlname: 'user'}),
                     }).then(response => {
                         if (!response.ok) {
                             return response.json().catch(() => ({ ret: "Failed to finish task due to a server error." }));
@@ -298,12 +298,12 @@
                     function deleteUser (id) {
                         event.preventDefault();
 
-                        const id_num = id.replace("b", "");
+                        const idNum = id.replace("b", "");
 
-                        const button = document.getElementById(`${id_num}b`)
-                        const p = document.getElementById(`${id_num}p`)
+                        const button = document.getElementById(`${idNum}b`)
+                        const p = document.getElementById(`${idNum}p`)
         
-                        const main = document.getElementById(`request${id_num}`);
+                        const main = document.getElementById(`request${idNum}`);
         
                         main.removeChild(button);
                         p.style.textDecoration = 'line-through';
@@ -316,7 +316,7 @@
                             headers: {
                                 'Content-Type': 'application/json'
                             },
-                            body: JSON.stringify({user_id: id_num, req: 'del_user'}),
+                            body: JSON.stringify({userID: idNum, req: 'del_user'}),
                         })
                         .then(response => {
                             if (!response.ok) {
@@ -357,7 +357,7 @@
                             password: form.querySelector(`#n${id}password`).value,
                             usertype: form.querySelector(`#n${id}usertype`).value,
                             days_left: form.querySelector(`#n${id}days`).value,
-                            user_id: id
+                            userID: id
                         };
                         
                         await fetch('/user/user-verify?id=ID_VALUE', {

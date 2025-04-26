@@ -9,7 +9,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "Absent manager with Node.js and SQLite",
+  "description": "Absent manager with Node.js, Express, and SQLite",
   "dependencies": {
     "cookie-parser": "^1.4.7",
     "dotenv": "^16.5.0",

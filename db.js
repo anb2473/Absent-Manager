@@ -22,17 +22,17 @@ if (!dbExists) {
     db.exec(`
         CREATE TABLE requests (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
+            userID INTEGER,
             name TEXT,
             secret_data TEXT,
             completed BOOLEAN DEFAULT 0,
-            FOREIGN KEY(user_id) REFERENCES users(id)
+            FOREIGN KEY(userID) REFERENCES users(id)
         )
     `)
 
     // USER TYPES: HR (human resources user), Faculty (faculty user), Staff (staff user), Supervisor (supervisor)
-    const add_user = db.prepare(`INSERT INTO users (fname, lname, password, days_left, user_type) VALUES (?, ?, ?, ?, ?)`);
-    add_user.run("HR", "user", "norwood_hr", -1, "HR")
+    const addUser = db.prepare(`INSERT INTO users (fname, lname, password, days_left, user_type) VALUES (?, ?, ?, ?, ?)`);
+    addUser.run(process.env.HR_FNAME || "HR", process.env.LR_FNAME || "user", process.env.HR_PASSWORD || "password", -1, "HR")
 }
 
 export default db
