@@ -339,7 +339,12 @@
                             bg.removeChild(warning);
                         }
 
-                        for (let i = 0; i <= daysLeft; i++) { // Changed loop condition to include 0
+                        const halfOption = document.createElement("option");
+                        halfOption.value = "half";
+                        halfOption.textContent = "Half Day";
+                        daysSelect.appendChild(halfOption);
+
+                        for (let i = 1; i <= daysLeft; i++) { // Changed loop condition to include 0
                             const option = document.createElement("option");
                             option.value = i;
                             option.textContent = i;

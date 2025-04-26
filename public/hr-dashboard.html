@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://unpkg.com/bcryptjs@2.4.3/dist/bcrypt.js"></script>
     <title>Dashboard</title>
     <style>
         *,
@@ -355,6 +356,7 @@
                             lname: form.querySelector(`#n${id}lname`).value,
                             password: form.querySelector(`#n${id}password`).value,
                             usertype: form.querySelector(`#n${id}usertype`).value,
+                            days_left: form.querySelector(`#n${id}days`).value,
                             user_id: id
                         };
                         

@@ -73,7 +73,9 @@ router.get('/dashboard', async (req, res) => {
                         <option value="Supervisor" ${row.user_type === 'Supervisor' ? 'selected' : ''}>Supervisor</option>
                         <option value="Faculty" ${row.user_type === 'Faculty' ? 'selected' : ''}>Faculty</option>
                         <option value="Staff" ${row.user_type === 'Staff' ? 'selected' : ''}>Staff</option>
-                    </select>
+                    </select><br><br>
+                    <label for="n${row.id}days">Days left:</label>
+                    <input type="number" value="${row.days_left}" id="n${row.id}days" class="usertype">
                     <input type="submit" value="Submit">
                 </form>
                 `
@@ -172,8 +174,8 @@ router.post('/user-verify', (req, res) => {
             }
         }
         else if (secret_cmd['req'] == 'put_user') {
-            const update_user = db.prepare('UPDATE users SET fname = ?, lname = ?, password = ?, user_type = ? WHERE id = ?')
-            update_user.run(secret_cmd['fname'], secret_cmd['lname'], secret_cmd['password'], secret_cmd['usertype'], secret_cmd['user_id'])
+            const update_user = db.prepare('UPDATE users SET fname = ?, lname = ?, password = ?, user_type = ?, days_left = ? WHERE id = ?')
+            update_user.run(secret_cmd['fname'], secret_cmd['lname'], secret_cmd['password'], secret_cmd['usertype'], secret_cmd['days_left'], secret_cmd['user_id'])
             res.json({ret: "Successfully updated user"})
         }
         
@@ -200,6 +202,9 @@ router.post('/user-verify', (req, res) => {
         const user = get_user.get(secret_cmd['id']);
         const days_left = user.days_left;
         let new_days = NaN;
+        if (days_left < 0) {
+            return res.json({ret: "Cannot take negative days off"})
+        }
         if (days_left - parseInt(secret_cmd['days']) >= 0) {
             new_days = days_left - parseInt(secret_cmd['days']);
         }
@@ -263,6 +268,11 @@ router.post('/send-request', (req, res) => {
         
         const post_request = db.prepare(`INSERT INTO requests (user_id, name, secret_data) VALUES (?, ?, ?)`)
         console.log(user_id)
+        const message = `Request from ${o_user.fname} ${o_user.lname} to take ${days} days off starting from ${date}`;
+        if (days !== 'half') {
+            message = `Request from ${o_user.fname} ${o_user.lname} to take a half day off on ${date}`
+            days = 0.5
+        }
         post_request.run(
             user_id, 
             `Request from ${o_user.fname} ${o_user.lname} to take ${days} days off starting from ${date}`, 
