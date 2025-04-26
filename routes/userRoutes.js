@@ -54,10 +54,29 @@ router.get('/dashboard', async (req, res) => {
         for (const row of users) {
             if (row.fname != 'HR' && row.lname != 'user') {
                 replaceText += `
+                <p id="${row.id}err" style="color: #d9534f; font-size: 15px; justify-self: center;"></p>
                 <div class="request" id="request${row.id}">
                     <p id="${row.id}p">${row.fname} ${row.lname}</p>
+                    <button id="${row.id}" class="verify-request" onclick="toggleForm(this.id)">Pull up user settings</button>
                     <button id="${row.id}b" class="verify-request" onclick="deleteUser(this.id)">Delete User</button>
-                </div>`
+                </div>
+                <form id="${row.id}form" style="height: 0; overflow: hidden; transition: height 0.5s ease-in-out;" onsubmit="putUser(event, ${row.id})" action="/user/user-verify?id=ID_VALUE">
+                    <h1 id="err"></h1><br>
+                    <label for="n${row.id}fname">First name:</label><br>
+                    <input type="text" id="n${row.id}fname" name="fname" value="${row.fname}"><br><br>
+                    <label for="n${row.id}lname">Last name:</label><br>
+                    <input type="text" id="n${row.id}lname" name="lname" value="${row.lname}"><br><br>
+                    <label for="n${row.id}password">Password:</label><br>
+                    <input type="text" id="n${row.id}password" name="password" value="${row.password}"><br><br>
+                    <label for="n${row.id}usertype">User type:</label>
+                    <select name="usertype" id="n${row.id}usertype" class="usertype">
+                        <option value="Supervisor" ${row.user_type === 'Supervisor' ? 'selected' : ''}>Supervisor</option>
+                        <option value="Faculty" ${row.user_type === 'Faculty' ? 'selected' : ''}>Faculty</option>
+                        <option value="Staff" ${row.user_type === 'Staff' ? 'selected' : ''}>Staff</option>
+                    </select>
+                    <input type="submit" value="Submit">
+                </form>
+                `
             }
         }
         if (replaceText == "") {
@@ -123,6 +142,11 @@ router.post('/user-verify', (req, res) => {
                 console.log(error) 
                 res.json({ret: `Failed to delete user ${secret_cmd['user_id']}`})
             }
+        }
+        else if (secret_cmd['req'] == 'put_user') {
+            const update_user = db.prepare('UPDATE users SET fname = ?, lname = ?, password = ?, user_type = ? WHERE id = ?')
+            update_user.run(secret_cmd['fname'], secret_cmd['lname'], secret_cmd['password'], secret_cmd['usertype'], secret_cmd['user_id'])
+            res.json({ret: "Successfully updated user"})
         }
         
         return
