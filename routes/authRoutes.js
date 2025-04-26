@@ -6,6 +6,7 @@ import jwt from 'jsonwebtoken';
 
 const router = express.Router();
 
+// Locate of module
 const __filename = fileURLToPath(import.meta.url);
 const __routesdir = dirname(__filename);
 const __dirname = dirname(__routesdir);
@@ -28,33 +29,28 @@ router.get('/login', async (req, res) => {
                 sameSite: 'strict', // Helps prevent CSRF
                 maxAge: 60 * 60 * 1000 // 1 hour (matches expiresIn)
             });
-            return res.redirect(`/user/dashboard?id=${user.id}`); // Replace '/dashboard' with your target URL
+            return res.redirect(`/user/dashboard?id=${user.id}`);
         } else {
             // Auth failure, redirecting to user not found
             return res.redirect(`err/unf`);
         }
     }
     catch (error) {
+        // Error (most likely invalid request), potentially server error
         console.log(error)
         res.redirect("err/ir")
     }
 })
 
-router.get('/err/unf', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'unf.html'));
-})
-
-router.get('/err/ir', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'ir.html'));
-})
-
 router.post('/send-request', (req, res) => {
     const {fname, lname, password, usertype, req_fname, req_lname} = req.body
 
+    // Pull up target user
     const get_user = db.prepare(`SELECT * FROM users WHERE fname = ? AND lname = ?`)
     const user = get_user.get(req_fname, req_lname);
     const user_id = user.id
     
+    // Add request to users requests
     const post_request = db.prepare(`INSERT INTO requests (user_id, name, secret_data) VALUES (?, ?, ?)`)
     post_request.run(
         user_id, 
@@ -69,8 +65,18 @@ router.post('/send-request', (req, res) => {
     res.redirect('/wait')
 })
 
+// Error pages
+router.get('/err/unf', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'unf.html'));
+})
+
+router.get('/err/ir', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'ir.html'));
+})
+
 router.get('/unauthorized', (req, res) => {
     res.sendFile(path.join(__dirname, "public", "unauthorized.html"))
 })
 
+// Export router to server auth routes
 export default router;

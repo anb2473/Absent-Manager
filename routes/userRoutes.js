@@ -3,10 +3,10 @@ import db from '../db.js';
 import {fileURLToPath} from 'url';
 import path, {dirname} from 'path';
 import fs from 'fs/promises';
-import fetch from 'node-fetch'
 
 const router = express.Router();
 
+// Locate of module
 const __filename = fileURLToPath(import.meta.url);
 const __routesdir = dirname(__filename);
 const __dirname = dirname(__routesdir);
@@ -205,8 +205,8 @@ router.post('/user-verify', (req, res) => {
         if (days_left < 0) {
             return res.json({ret: "Cannot take negative days off"})
         }
-        if (days_left - parseInt(secret_cmd['days']) >= 0) {
-            new_days = days_left - parseInt(secret_cmd['days']);
+        if (days_left - parseFloat(secret_cmd['days']) >= 0) {
+            new_days = days_left - parseFloat(secret_cmd['days']);
         }
         else {
             return res.json({ret: "User does not have enough days left"})
@@ -220,70 +220,83 @@ router.post('/user-verify', (req, res) => {
     return res.json({ret: ""})
 }) 
 
-router.post('/send-request', (req, res) => {
-    if (req.body['id'] != undefined) {
-        const get_task = db.prepare(`SELECT * FROM requests WHERE id = ? AND user_id = ?`)
-        const task_data = get_task.get(req.body['id'], req.userID)
-        const task = JSON.parse(task_data['secret_data'])
-        const days = task['days']
-        const date = task['date']
-        const get_user = db.prepare(`SELECT * FROM users WHERE fname = ? AND lname = ?`)
-        const user = get_user.get('HR', 'user');
-        if (user == undefined) {
-            return res.json({ret: "Invalid supervisor, please check the name"})
-        }
-        const user_id = user.id
-
-        const get_user_by_id = db.prepare(`SELECT * FROM users WHERE id = ?`)
-        const o_user = get_user_by_id.get(task['id'])
-        
-        const post_request = db.prepare(`INSERT INTO requests (user_id, name, secret_data) VALUES (?, ?, ?)`)
-        post_request.run(
-            user_id, 
-            `Request from ${o_user.fname} ${o_user.lname} to take ${days} days off starting from ${date}`, 
-            JSON.stringify({
-                req: "take_days",
-                id: task['id'],
-                days: days,
-                date: date
-            }));
-
-        const remove_task = db.prepare(`UPDATE requests SET completed = 1 WHERE id = ? AND user_id = ?`)
-        remove_task.run(req.body['id'], req.userID)
-
-        return res.json({ret: "Successfully sent request"})
+function handleDaysRequestFromRequests(req, res) {
+    const get_task = db.prepare(`SELECT * FROM requests WHERE id = ? AND user_id = ?`)
+    const task_data = get_task.get(req.body['id'], req.userID)
+    const task = JSON.parse(task_data['secret_data'])
+    const days = task['days']
+    const date = task['date']
+    const get_user = db.prepare(`SELECT * FROM users WHERE fname = ? AND lname = ?`)
+    const user = get_user.get('HR', 'user');
+    if (user == undefined) {
+        return res.json({ret: "Invalid supervisor, please check the name"})
     }
+    const user_id = user.id
+
+    const get_user_by_id = db.prepare(`SELECT * FROM users WHERE id = ?`)
+    const o_user = get_user_by_id.get(task['id'])
+    
+    const post_request = db.prepare(`INSERT INTO requests (user_id, name, secret_data) VALUES (?, ?, ?)`)
+    var message = `Request from ${o_user.fname} ${o_user.lname} to take ${days} days off starting from ${date}`;
+    if (days == 0.5) {
+        message = `Request from ${o_user.fname} ${o_user.lname} to take a half day off on ${date}`
+    }
+    post_request.run(
+        user_id, 
+        message, 
+        JSON.stringify({
+            req: "take_days",
+            id: task['id'],
+            days: days,
+            date: date
+        }));
+
+    const remove_task = db.prepare(`UPDATE requests SET completed = 1 WHERE id = ? AND user_id = ?`)
+    remove_task.run(req.body['id'], req.userID)
+
+    return res.json({ret: "Successfully sent request"})
+}
+
+function handleDaysRequest(req, res) {
+    var {days, date, req_fname, req_lname} = req.body
+
+    const get_user = db.prepare(`SELECT * FROM users WHERE fname = ? AND lname = ?`)
+    const user = get_user.get(req_fname, req_lname);
+    if (user == undefined) {
+        return res.json({ret: "Invalid supervisor, please check the name"})
+    }
+    const user_id = user.id
+
+    const get_user_by_id = db.prepare(`SELECT * FROM users WHERE id = ?`)
+    const o_user = get_user_by_id.get(req.userID)
+    
+    const post_request = db.prepare(`INSERT INTO requests (user_id, name, secret_data) VALUES (?, ?, ?)`)
+    var message = `Request from ${o_user.fname} ${o_user.lname} to take ${days} days off starting from ${date}`;
+    if (days == 'half') {
+        message = `Request from ${o_user.fname} ${o_user.lname} to take a half day off on ${date}`
+        days = 0.5
+    }
+    post_request.run(
+        user_id, 
+        message, 
+        JSON.stringify({
+            req: "take_days",
+            id: req.userID,
+            days: days,
+            date: date
+        }));
+
+    res.json({ret: "Successfully sent request"})
+}
+
+router.post('/send-request', (req, res) => {
+    // Forwarding request from open requests based on request ID
+    if (req.body['id'] != undefined) {
+        handleDaysRequestFromRequests(req, res)
+    }
+    // Sending request from raw data
     else {
-        const {days, date, req_fname, req_lname} = req.body
-
-        const get_user = db.prepare(`SELECT * FROM users WHERE fname = ? AND lname = ?`)
-        const user = get_user.get(req_fname, req_lname);
-        if (user == undefined) {
-            return res.json({ret: "Invalid supervisor, please check the name"})
-        }
-        const user_id = user.id
-
-        const get_user_by_id = db.prepare(`SELECT * FROM users WHERE id = ?`)
-        const o_user = get_user_by_id.get(req.userID)
-        
-        const post_request = db.prepare(`INSERT INTO requests (user_id, name, secret_data) VALUES (?, ?, ?)`)
-        console.log(user_id)
-        const message = `Request from ${o_user.fname} ${o_user.lname} to take ${days} days off starting from ${date}`;
-        if (days !== 'half') {
-            message = `Request from ${o_user.fname} ${o_user.lname} to take a half day off on ${date}`
-            days = 0.5
-        }
-        post_request.run(
-            user_id, 
-            `Request from ${o_user.fname} ${o_user.lname} to take ${days} days off starting from ${date}`, 
-            JSON.stringify({
-                req: "take_days",
-                id: req.userID,
-                days: days,
-                date: date
-            }));
-
-        res.json({ret: "Successfully sent request"})
+        handleDaysRequest(req, res)
     }
 })
 

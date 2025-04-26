@@ -1,9 +1,11 @@
 import {DatabaseSync} from 'node:sqlite';
 import { existsSync } from 'fs';
 
+// Check if db exists, and if so use the existing db, and associate the db to the sqlite file.
 const dbExists = existsSync('./database.sqlite');
 const db = new DatabaseSync('./database.sqlite')
 
+// Generate a new db
 if (!dbExists) {
     // Prepare users table
     db.exec(`
@@ -11,7 +13,7 @@ if (!dbExists) {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             fname TEXT,
             lname TEXT,
-            days_left INTEGER,
+            days_left REAL,
             user_type TEXT,
             password TEXT
         )

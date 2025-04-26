@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
     <style>
+        /* Removing padding to remove unintended side effects and allow cross browser scalability */
         *,
         *::before,
         *::after {
@@ -24,34 +25,34 @@
         }
 
         main {
-            padding-bottom: 250px; /* Adjust the value as needed */
+            padding-bottom: 250px;
         }
 
         .bg {
             justify-self: center;
             border: 1px solid #ccc;
             box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.3);
-            padding: 30px; /* Increased padding for better spacing */
+            padding: 30px;
             transform: translateY(20vh);
             width: 75%;
             background-color: white;
             border-radius: 20px;
             transition: transform 0.4s ease-in-out;
-            display: flex; /* Use flexbox to arrange form elements */
-            flex-direction: column; /* Stack form elements vertically */
-            gap: 15px; /* Add some space between form elements */
-        }
-
-        @media (max-width: 768px) {
-            .bg {
-                width: 90%; /* Adjust width for larger screens */
-                padding: 15px;
-                border-radius: 8px
-            }
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
         }
 
         .bg:hover {
             transform: translateY(20vh) scale(1.05);
+        }
+
+        @media (max-width: 768px) {
+            .bg {
+                width: 90%;
+                padding: 15px;
+                border-radius: 8px
+            }
         }
 
         header {
@@ -101,15 +102,15 @@
         .no-days-left {
             color: #d9534f;
             justify-self: center;
-            padding: 30px; /* Adjusted padding */
-            font-size: 2rem; /* Slightly reduced font size */
+            padding: 30px; 
+            font-size: 2rem;
             text-align: center;
         }
 
         form {
             display: flex;
             flex-direction: column;
-            gap: 10px; /* Space between labels and inputs */
+            gap: 10px;
         }
 
         label {
@@ -127,7 +128,7 @@
         }
 
         select {
-            appearance: none; /* Remove default arrow */
+            appearance: none; 
             background-image: url('data:image/svg+xml;charset=UTF-8,<svg fill="%23333" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>');
             background-repeat: no-repeat;
             background-position: right 10px center;
@@ -148,7 +149,6 @@
             outline: none;
         }
 
-        /* Submit button styling */
         input[type="submit"] {
             background-color: #5cb85c;
             color: white;
@@ -160,7 +160,6 @@
             transition: background-color 0.3s ease;
         }
 
-        /* Date input styling */
         input[type="date"] {
             padding: 10px 15px;
             border: 1px solid #ccc;
@@ -170,7 +169,6 @@
             background-color: #f9f9f9;
         }
 
-        /* Dropdown styling */
         select {
             padding: 10px 15px;
             border: 1px solid #ccc;
