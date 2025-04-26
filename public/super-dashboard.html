@@ -28,13 +28,16 @@
             background-color: #f4f4f4;
             margin: 0;
         }
+        
+        main {
+            padding-bottom: 100px; /* Adjust the value as needed */
+        }
 
         .bg {
             justify-self: center;
             border: 1px solid #ccc;
             box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.3);
             padding: 30px; /* Increased padding for better spacing */
-            transform: translateY(20vh);
             width: 75%;
             background-color: white;
             border-radius: 20px;
@@ -44,8 +47,16 @@
             gap: 15px; /* Add some space between form elements */
         }
 
+        @media (max-width: 768px) {
+            .bg {
+                width: 100%; /* Adjust width for larger screens */
+                padding: 15px;
+                border-radius: 8px
+            }
+        }
+
         .bg:hover {
-            transform: translateY(20vh) scale(1.05);
+            transform: scale(1.05);
         }
 
         header {
@@ -139,6 +150,25 @@
             padding-top: 10px;
         }
 
+        @media (max-width: 900px) {
+            .request {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .request button {
+                padding: 25px;
+                margin: 10px;
+            }
+
+            .request { /* Or whatever class you're using */
+                border: 2px solid #e5e5e5; /* Optional: Add a visible border as well */
+                margin: 15px;
+                border-radius: 20px;
+                background-color: #fdfdfd
+            }
+        }
+
         .verify-request {
             background-color: #007bff; /* A nice blue for submit */
             color: white;
@@ -163,6 +193,11 @@
             padding: 50px;
         }
 
+        .centered h1 {
+            padding-top: 70px;
+            padding-bottom: 20px;
+        }
+
         #fname, #lname {
             padding: 12px 15px;
             border-radius: 6px;
@@ -177,7 +212,6 @@
             outline: none;
         }
 
-        /* Submit button styling */
         input[type="submit"] {
             background-color: #5cb85c;
             color: white;
@@ -189,7 +223,6 @@
             transition: background-color 0.3s ease;
         }
 
-        /* Date input styling */
         input[type="date"] {
             padding: 10px 15px;
             border: 1px solid #ccc;
@@ -199,7 +232,6 @@
             background-color: #f9f9f9;
         }
 
-        /* Dropdown styling */
         select {
             padding: 10px 15px;
             border: 1px solid #ccc;
@@ -229,112 +261,114 @@
     </header>
 
     <main>
-        <div class="bg">
-            <form action="/user/send-request?id=ID_VALUE" onsubmit="submitForm(event)">
-                <label for="days">Days absent:</label>
-                <select name="days" id="days"> </select>
-                <label for="date">Date:</label>
-                <input type="date" id="date" name="date">
-                <label for="supervisor">Supervisor:</label>
-                <input type="fname" id="fname" name="fname">
-                <input type="lname" id="lname" name="lname">
-                <input type="submit" value="Submit">
-            </form>
+        <div class="centered">
+            <h1>Take days off</h1>
 
-            <h1 class="err"></h1>
+            <div class="bg">
+                <form action="/user/send-request?id=ID_VALUE" onsubmit="submitForm(event)">
+                    <label for="days">Days absent:</label>
+                    <select name="days" id="days"> </select>
+                    <label for="date">Date:</label>
+                    <input type="date" id="date" name="date">
+                    <label for="supervisor">Supervisor:</label>
+                    <input type="fname" id="fname" name="fname">
+                    <input type="lname" id="lname" name="lname">
+                    <input type="submit" value="Submit">
+                </form>
+
+                <h1 class="err"></h1>
+
+                <script>
+                    async function submitForm(event) {    
+                        event.preventDefault();
+                            
+                        const formData = {
+                            days: document.getElementById('days').value,
+                            date: document.getElementById('date').value,
+                            req_fname: document.getElementById('fname').value,
+                            req_lname: document.getElementById('lname').value
+                        };
+                        
+                        fetch('/user/send-request?id=ID_VALUE', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(formData),
+                            redirect: 'follow'
+                        })
+                        .then(async response => {
+                            if (response.redirected) {
+                                // If the response contains a redirect, navigate to that URL
+                                window.location.href = response.url;
+                            } else {
+                                // Handle non-redirect response if needed
+                                const json_data = await response.json();
+
+                                const err = document.querySelector('.err');
+                                err.textContent = json_data['ret'];
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            document.getElementById('err').textContent = 'Submission failed';
+                        });
+                    }
+                    </script>
+
+                <h1 class="no-days-left" id="no-days-left">You have no days left</h1>
+            </div>
 
             <script>
-                async function submitForm(event) {    
-                    event.preventDefault();
-                          
-                    const formData = {
-                        days: document.getElementById('days').value,
-                        date: document.getElementById('date').value,
-                        req_fname: document.getElementById('fname').value,
-                        req_lname: document.getElementById('lname').value
-                    };
-                    
-                    fetch('/user/send-request?id=ID_VALUE', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(formData),
-                        redirect: 'follow'
-                    })
-                    .then(async response => {
-                        if (response.redirected) {
-                            // If the response contains a redirect, navigate to that URL
-                            window.location.href = response.url;
-                        } else {
-                            // Handle non-redirect response if needed
-                            const json_data = await response.json();
-
-                            const err = document.querySelector('.err');
-                            err.textContent = json_data['ret'];
+                const daysLeftElement = document.querySelector(".days-left");
+                try {
+                    if (daysLeftElement) {
+                        const daysLeftText = daysLeftElement.textContent.split('<span>')[0].trim();
+                        const daysLeft = parseInt(daysLeftText);
+                        if (isNaN(daysLeft)) {
+                            throw new Error("Non int days (NA)");
                         }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        document.getElementById('err').textContent = 'Submission failed';
-                    });
-                }
-                </script>
+                        const daysSelect = document.getElementById("days");
+                        const bg = document.querySelector(".bg");
+                        if (daysLeft <= 0) {
+                            const form = document.querySelector('form');
+                            bg.removeChild(form)
+                        }
+                        else {
+                            const warning = document.querySelector(".no-days-left");
+                            bg.removeChild(warning);
+                        }
 
-            <h1 class="no-days-left" id="no-days-left">You have no days left</h1>
-        </div>
-
-        <script>
-            const daysLeftElement = document.querySelector(".days-left");
-            try {
-                if (daysLeftElement) {
-                    const daysLeftText = daysLeftElement.textContent.split('<span>')[0].trim();
-                    const daysLeft = parseInt(daysLeftText);
-                    if (isNaN(daysLeft)) {
-                        throw new Error("Non int days (NA)");
-                    }
-                    const daysSelect = document.getElementById("days");
-                    const bg = document.querySelector(".bg");
-                    if (daysLeft <= 0) {
+                        for (let i = 0; i <= daysLeft; i++) { // Changed loop condition to include 0
+                            const option = document.createElement("option");
+                            option.value = i;
+                            option.textContent = i;
+                            daysSelect.appendChild(option);
+                        }
+                    } else {
+                        const bg = document.querySelector(".bg");
                         const form = document.querySelector('form');
                         bg.removeChild(form)
                     }
-                    else {
-                        const warning = document.querySelector(".no-days-left");
-                        bg.removeChild(warning);
-                    }
-
-                    for (let i = 0; i <= daysLeft; i++) { // Changed loop condition to include 0
-                        const option = document.createElement("option");
-                        option.value = i;
-                        option.textContent = i;
-                        daysSelect.appendChild(option);
-                    }
-                } else {
+                }
+                catch (err) {
+                    console.log(err)
                     const bg = document.querySelector(".bg");
                     const form = document.querySelector('form');
                     bg.removeChild(form)
+                    const warning = document.getElementById("no-days-left");
+                    warning.textContent = "Failed to load your days off, try reloading the page. If the error persists, contact tech."
+                    warning.style.fontSize = "1.5rem"
                 }
-            }
-            catch (err) {
-                console.log(err)
-                const bg = document.querySelector(".bg");
-                const form = document.querySelector('form');
-                bg.removeChild(form)
-                const warning = document.getElementById("no-days-left");
-                warning.textContent = "Failed to load your days off, try reloading the page. If the error persists, contact tech."
-                warning.style.fontSize = "1.5rem"
-            }
-        </script>
+            </script>
 
-        <div class="centered">
             <h1>All Requests</h1>
 
             <div class="bg">
 
                 REQUESTS
 
-            <p id="success"></p>
+                <p id="success"></p>
 
             </div>
 
@@ -371,9 +405,9 @@
 
                             success.textContent = json_data['ret'];
                             if (success.textContent.startsWith('Success')) {
-                                success.style.color = '#5cb85c'; // Green for success
+                                success.style.color = '#5cb85c';
                             } else {
-                                success.style.color = '#d9534f'; // Red for error
+                                success.style.color = '#d9534f';
                             }
                         }
                     })
@@ -381,28 +415,14 @@
                         console.error('Error:', error);
                         success.textContent = 'Submission failed';
                     });
-    
-                    // ret = await fetch('/user/user-verify?id=ID_VALUE', {
-                    //     method: 'POST',
-                    //     headers: {
-                    //         'Content-Type': 'application/json',
-                    //     },
-                    //     body: JSON.stringify({id: id_num}),
-                    // }).then(response => {
-                    //     console.log(response)
-                    //     if (!response.ok) {
-                    //         return response.json().catch(() => ({ ret: "Failed to finish task due to a server error." }));
-                    //     }
-                    //     return response.json();
-                    // })
-                    // .then(data => {
-                    //     success.textContent = data['ret'];
-                    // })
-                    // .catch(error => {
-                    //     success.textContent = `Failed to finish task due to an unforseen error. (${error})`;
-                    // });
                 }
             </script>
+
+            <h1>All Approved Requests</h1>
+
+            <div class="bg">
+                ALL_APPROVED
+            </div>
         </div>
     </main>
 </body>

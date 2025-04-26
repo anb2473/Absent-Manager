@@ -23,6 +23,10 @@
             overflow-x: hidden;
         }
 
+        main {
+            padding-bottom: 100px; /* Adjust the value as needed */
+        }
+
         .bg {
             justify-self: center;
             border: 1px solid #ccc; /* Optional: Add a visible border as well */
@@ -33,6 +37,14 @@
             background-color: white;
             border-radius: 20px;
             transition: transform 0.4s ease-in-out;
+        }
+
+        @media (max-width: 768px) {
+            .bg {
+                width: 100%; /* Adjust width for larger screens */
+                padding: 15px;
+                border-radius: 8px;
+            }
         }
 
         .bg:hover {
@@ -97,6 +109,25 @@
 
         .request p {
             padding-top: 10px;
+        }
+
+        @media (max-width: 900px) {
+            .request {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .request button {
+                padding: 25px;
+                margin: 10px;
+            }
+
+            .request { /* Or whatever class you're using */
+                border: 2px solid #e5e5e5; /* Optional: Add a visible border as well */
+                margin: 15px;
+                border-radius: 20px;
+                background-color: #fdfdfd
+            }
         }
 
         .verify-request {
@@ -398,6 +429,12 @@
                         });
                     }
                 </script>
+            </div>
+
+            <h1>All Approved Requests</h1>
+
+            <div class="bg">
+                ALL_APPROVED
             </div>
         </div>
     </main>

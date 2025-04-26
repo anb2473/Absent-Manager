@@ -23,6 +23,10 @@
             overflow-x: hidden;
         }
 
+        main {
+            padding-bottom: 250px; /* Adjust the value as needed */
+        }
+
         .bg {
             justify-self: center;
             border: 1px solid #ccc;
@@ -36,6 +40,14 @@
             display: flex; /* Use flexbox to arrange form elements */
             flex-direction: column; /* Stack form elements vertically */
             gap: 15px; /* Add some space between form elements */
+        }
+
+        @media (max-width: 768px) {
+            .bg {
+                width: 90%; /* Adjust width for larger screens */
+                padding: 15px;
+                border-radius: 8px
+            }
         }
 
         .bg:hover {

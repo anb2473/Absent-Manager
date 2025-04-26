@@ -83,6 +83,20 @@ router.get('/dashboard', async (req, res) => {
             replaceText = "No Requests"
         }
         modifiedContent = modifiedContent.replaceAll("USERS", replaceText)
+
+        replaceText = ""
+        const selectAllApprovedRequests = db.prepare(`SELECT * FROM requests WHERE completed = 1 AND user_id = ?`);
+        const approvedRequests = selectAllApprovedRequests.all(req.userID);
+        for (const row of approvedRequests) {
+            replaceText += `
+            <div class="request" id="request${row.id}">
+                <p id="${row.id}p">${row.name}</p>
+            </div>`
+        }
+        if (replaceText == "") {
+            replaceText = "No Requests"
+        }
+        modifiedContent = modifiedContent.replaceAll("ALL_APPROVED", replaceText)
     }
     else if (user.user_type == 'Supervisor') {
         const filePath = path.join(__dirname, 'public', 'super-dashboard.html')
@@ -104,6 +118,20 @@ router.get('/dashboard', async (req, res) => {
             replaceText = "No Requests"
         }
         modifiedContent = modifiedContent.replaceAll("REQUESTS", replaceText).replaceAll("ID_VALUE", req.userID)
+
+        replaceText = ""
+        const selectAllApprovedRequests = db.prepare(`SELECT * FROM requests WHERE completed = 1 AND user_id = ?`);
+        const approvedRequests = selectAllApprovedRequests.all(req.userID);
+        for (const row of approvedRequests) {
+            replaceText += `
+            <div class="request" id="request${row.id}">
+                <p id="${row.id}p">${row.name}</p>
+            </div>`
+        }
+        if (replaceText == "") {
+            replaceText = "No Requests"
+        }
+        modifiedContent = modifiedContent.replaceAll("ALL_APPROVED", replaceText)
     }
 
     res.send(modifiedContent);
