@@ -11,6 +11,130 @@ const __filename = fileURLToPath(import.meta.url);
 const __routesdir = dirname(__filename);
 const __dirname = dirname(__routesdir);
 
+async function loadFacStaffDashboard(req, res, user, modifiedContent) {
+    const filePath = path.join(__dirname, 'public', 'dashboard.html')
+    const fileContent = await fs.readFile(filePath, 'utf8');
+
+    modifiedContent = fileContent.replaceAll('Not Available', user.days_left).replaceAll("NAME", user.fname).replaceAll("ROLE", user.user_type).replaceAll("ID_VALUE", req.userID);
+
+    return modifiedContent;
+}
+
+async function loadHRDashboard(req, res, user, modifiedContent) {
+    const filePath = path.join(__dirname, 'public', 'hr-dashboard.html')
+    const fileContent = await fs.readFile(filePath, 'utf8');
+
+    modifiedContent = fileContent.replaceAll('Not Available', user.days_left).replaceAll("NAME", user.fname);
+
+    var replaceText = ""
+    const selectAllRequests = db.prepare(`SELECT * FROM requests WHERE completed = 0 AND user_id = ?`);
+    const requests = selectAllRequests.all(req.userID);
+    for (const row of requests) {
+        replaceText += `
+        <div class="request" id="request${row.id}">
+            <p id="${row.id}p">${row.name}</p>
+            <button id="${row.id}b" class="verify-request" onclick="execRequest(this.id)">Verify Request</button>
+        </div>`
+    }
+    if (replaceText == "") {
+        replaceText = "No Requests"
+    }
+
+    modifiedContent = modifiedContent.replaceAll("REQUESTS", replaceText).replaceAll("ID_VALUE", req.userID)
+
+    replaceText = ""
+    const selectAllUsers = db.prepare(`SELECT * FROM users`);
+    const users = selectAllUsers.all();
+    for (const row of users) {
+        if (row.fname != 'HR' && row.lname != 'user') {
+            replaceText += `
+            <p id="${row.id}err" style="color: #d9534f; font-size: 15px; justify-self: center;"></p>
+            <div class="request" id="request${row.id}">
+                <p id="${row.id}p">${row.fname} ${row.lname}</p>
+                <button id="${row.id}" class="verify-request" onclick="toggleForm(this.id)">Pull up user settings</button>
+                <button id="${row.id}b" class="verify-request" onclick="deleteUser(this.id)">Delete User</button>
+            </div>
+            <form id="${row.id}form" style="height: 0; overflow: hidden; transition: height 0.5s ease-in-out;" onsubmit="putUser(event, ${row.id})" action="/user/user-verify?id=ID_VALUE">
+                <h1 id="err"></h1><br>
+                <label for="n${row.id}fname">First name:</label><br>
+                <input type="text" id="n${row.id}fname" name="fname" value="${row.fname}"><br><br>
+                <label for="n${row.id}lname">Last name:</label><br>
+                <input type="text" id="n${row.id}lname" name="lname" value="${row.lname}"><br><br>
+                <label for="n${row.id}password">Password:</label><br>
+                <input type="text" id="n${row.id}password" name="password" value="${row.password}"><br><br>
+                <label for="n${row.id}usertype">User type:</label>
+                <select name="usertype" id="n${row.id}usertype" class="usertype">
+                    <option value="Supervisor" ${row.user_type === 'Supervisor' ? 'selected' : ''}>Supervisor</option>
+                    <option value="Faculty" ${row.user_type === 'Faculty' ? 'selected' : ''}>Faculty</option>
+                    <option value="Staff" ${row.user_type === 'Staff' ? 'selected' : ''}>Staff</option>
+                </select><br><br>
+                <label for="n${row.id}days">Days left:</label>
+                <input type="number" value="${row.days_left}" id="n${row.id}days" class="usertype">
+                <input type="submit" value="Submit">
+            </form>
+            `
+        }
+    }
+    if (replaceText == "") {
+        replaceText = "No Requests"
+    }
+    modifiedContent = modifiedContent.replaceAll("USERS", replaceText)
+
+    replaceText = ""
+    const selectAllApprovedRequests = db.prepare(`SELECT * FROM requests WHERE completed = 1 AND user_id = ?`);
+    const approvedRequests = selectAllApprovedRequests.all(req.userID);
+    for (const row of approvedRequests) {
+        replaceText += `
+        <div class="request" id="request${row.id}">
+            <p id="${row.id}p">${row.name}</p>
+        </div>`
+    }
+    if (replaceText == "") {
+        replaceText = "No Requests"
+    }
+    modifiedContent = modifiedContent.replaceAll("ALL_APPROVED", replaceText)
+
+    return modifiedContent;
+}
+
+async function loadSuperDashboard(req, res, user, modifiedContent) {
+    const filePath = path.join(__dirname, 'public', 'super-dashboard.html')
+    const fileContent = await fs.readFile(filePath, 'utf8');
+
+    modifiedContent = fileContent.replaceAll('Not Available', user.days_left).replaceAll("NAME", user.fname).replaceAll("ROLE", user.user_type);
+
+    var replaceText = ""
+    const selectAllRequests = db.prepare(`SELECT * FROM requests WHERE completed = 0 AND user_id = ?`);
+    const requests = selectAllRequests.all(req.userID);
+    for (const row of requests) {
+        replaceText += `
+        <div class="request" id="request${row.id}">
+            <p id="${row.id}p">${row.name}</p>
+            <button id="${row.id}b" class="verify-request" onclick="execRequest(this.id)">Verify Request</button>
+        </div>`
+    }
+    if (replaceText == "") {
+        replaceText = "No Requests"
+    }
+    modifiedContent = modifiedContent.replaceAll("REQUESTS", replaceText).replaceAll("ID_VALUE", req.userID)
+
+    replaceText = ""
+    const selectAllApprovedRequests = db.prepare(`SELECT * FROM requests WHERE completed = 1 AND user_id = ?`);
+    const approvedRequests = selectAllApprovedRequests.all(req.userID);
+    for (const row of approvedRequests) {
+        replaceText += `
+        <div class="request" id="request${row.id}">
+            <p id="${row.id}p">${row.name}</p>
+        </div>`
+    }
+    if (replaceText == "") {
+        replaceText = "No Requests"
+    }
+    modifiedContent = modifiedContent.replaceAll("ALL_APPROVED", replaceText)
+
+    return modifiedContent;
+}
+
 router.get('/dashboard', async (req, res) => {
     if (!req.userID) {
         res.redirect("/auth/err/ir")
@@ -21,166 +145,19 @@ router.get('/dashboard', async (req, res) => {
 
     let modifiedContent = "500";
     if (user.user_type != 'HR' && user.user_type != 'Supervisor') {
-        const filePath = path.join(__dirname, 'public', 'dashboard.html')
-        const fileContent = await fs.readFile(filePath, 'utf8');
-
-        modifiedContent = fileContent.replaceAll('Not Available', user.days_left).replaceAll("NAME", user.fname).replaceAll("ROLE", user.user_type).replaceAll("ID_VALUE", req.userID);
+        modifiedContent = await loadFacStaffDashboard(req, res, user, modifiedContent)
     }
     else if (user.user_type == 'HR') {
-        const filePath = path.join(__dirname, 'public', 'hr-dashboard.html')
-        const fileContent = await fs.readFile(filePath, 'utf8');
-
-        modifiedContent = fileContent.replaceAll('Not Available', user.days_left).replaceAll("NAME", user.fname);
-
-        var replaceText = ""
-        const selectAllRequests = db.prepare(`SELECT * FROM requests WHERE completed = 0 AND user_id = ?`);
-        const requests = selectAllRequests.all(req.userID);
-        for (const row of requests) {
-            replaceText += `
-            <div class="request" id="request${row.id}">
-                <p id="${row.id}p">${row.name}</p>
-                <button id="${row.id}b" class="verify-request" onclick="execRequest(this.id)">Verify Request</button>
-            </div>`
-        }
-        if (replaceText == "") {
-            replaceText = "No Requests"
-        }
-
-        modifiedContent = modifiedContent.replaceAll("REQUESTS", replaceText).replaceAll("ID_VALUE", req.userID)
-
-        replaceText = ""
-        const selectAllUsers = db.prepare(`SELECT * FROM users`);
-        const users = selectAllUsers.all();
-        for (const row of users) {
-            if (row.fname != 'HR' && row.lname != 'user') {
-                replaceText += `
-                <p id="${row.id}err" style="color: #d9534f; font-size: 15px; justify-self: center;"></p>
-                <div class="request" id="request${row.id}">
-                    <p id="${row.id}p">${row.fname} ${row.lname}</p>
-                    <button id="${row.id}" class="verify-request" onclick="toggleForm(this.id)">Pull up user settings</button>
-                    <button id="${row.id}b" class="verify-request" onclick="deleteUser(this.id)">Delete User</button>
-                </div>
-                <form id="${row.id}form" style="height: 0; overflow: hidden; transition: height 0.5s ease-in-out;" onsubmit="putUser(event, ${row.id})" action="/user/user-verify?id=ID_VALUE">
-                    <h1 id="err"></h1><br>
-                    <label for="n${row.id}fname">First name:</label><br>
-                    <input type="text" id="n${row.id}fname" name="fname" value="${row.fname}"><br><br>
-                    <label for="n${row.id}lname">Last name:</label><br>
-                    <input type="text" id="n${row.id}lname" name="lname" value="${row.lname}"><br><br>
-                    <label for="n${row.id}password">Password:</label><br>
-                    <input type="text" id="n${row.id}password" name="password" value="${row.password}"><br><br>
-                    <label for="n${row.id}usertype">User type:</label>
-                    <select name="usertype" id="n${row.id}usertype" class="usertype">
-                        <option value="Supervisor" ${row.user_type === 'Supervisor' ? 'selected' : ''}>Supervisor</option>
-                        <option value="Faculty" ${row.user_type === 'Faculty' ? 'selected' : ''}>Faculty</option>
-                        <option value="Staff" ${row.user_type === 'Staff' ? 'selected' : ''}>Staff</option>
-                    </select><br><br>
-                    <label for="n${row.id}days">Days left:</label>
-                    <input type="number" value="${row.days_left}" id="n${row.id}days" class="usertype">
-                    <input type="submit" value="Submit">
-                </form>
-                `
-            }
-        }
-        if (replaceText == "") {
-            replaceText = "No Requests"
-        }
-        modifiedContent = modifiedContent.replaceAll("USERS", replaceText)
-
-        replaceText = ""
-        const selectAllApprovedRequests = db.prepare(`SELECT * FROM requests WHERE completed = 1 AND user_id = ?`);
-        const approvedRequests = selectAllApprovedRequests.all(req.userID);
-        for (const row of approvedRequests) {
-            replaceText += `
-            <div class="request" id="request${row.id}">
-                <p id="${row.id}p">${row.name}</p>
-            </div>`
-        }
-        if (replaceText == "") {
-            replaceText = "No Requests"
-        }
-        modifiedContent = modifiedContent.replaceAll("ALL_APPROVED", replaceText)
+        modifiedContent = await loadHRDashboard(req, res, user, modifiedContent)
     }
     else if (user.user_type == 'Supervisor') {
-        const filePath = path.join(__dirname, 'public', 'super-dashboard.html')
-        const fileContent = await fs.readFile(filePath, 'utf8');
-
-        modifiedContent = fileContent.replaceAll('Not Available', user.days_left).replaceAll("NAME", user.fname).replaceAll("ROLE", user.user_type);
-
-        var replaceText = ""
-        const selectAllRequests = db.prepare(`SELECT * FROM requests WHERE completed = 0 AND user_id = ?`);
-        const requests = selectAllRequests.all(req.userID);
-        for (const row of requests) {
-            replaceText += `
-            <div class="request" id="request${row.id}">
-                <p id="${row.id}p">${row.name}</p>
-                <button id="${row.id}b" class="verify-request" onclick="execRequest(this.id)">Verify Request</button>
-            </div>`
-        }
-        if (replaceText == "") {
-            replaceText = "No Requests"
-        }
-        modifiedContent = modifiedContent.replaceAll("REQUESTS", replaceText).replaceAll("ID_VALUE", req.userID)
-
-        replaceText = ""
-        const selectAllApprovedRequests = db.prepare(`SELECT * FROM requests WHERE completed = 1 AND user_id = ?`);
-        const approvedRequests = selectAllApprovedRequests.all(req.userID);
-        for (const row of approvedRequests) {
-            replaceText += `
-            <div class="request" id="request${row.id}">
-                <p id="${row.id}p">${row.name}</p>
-            </div>`
-        }
-        if (replaceText == "") {
-            replaceText = "No Requests"
-        }
-        modifiedContent = modifiedContent.replaceAll("ALL_APPROVED", replaceText)
+        modifiedContent = await loadSuperDashboard(req, res, user, modifiedContent)
     }
 
     res.send(modifiedContent);
 })
 
-router.post('/user-verify', (req, res) => {
-    if (!req.body['id']) {
-        const secret_cmd = req.body;
-
-        if (secret_cmd['req'] == 'gen_user') {
-            const days_left_policy = {
-                'Supervisor': 10,
-                'Faculty': 8,
-                'Staff': 20
-            }
-        
-            const gen_user = db.prepare('INSERT INTO users (fname, lname, password, days_left, user_type) VALUES (?, ?, ?, ?, ?)')
-            const usertype = secret_cmd['usertype']
-            let policy = "No Policy"
-            try {
-                policy = days_left_policy[usertype]
-            }
-            catch (error) { console.log(error) }
-            gen_user.run(secret_cmd['fname'], secret_cmd['lname'], secret_cmd['password'], 
-                policy, 
-                usertype)
-        }
-        else if (secret_cmd['req'] == 'del_user') {
-            const del_user = db.prepare('DELETE FROM users WHERE id = ?')
-            const del_user_requests = db.prepare('DELETE FROM requests WHERE user_id = ?')
-            try {
-                del_user_requests.run(secret_cmd['user_id'])
-                del_user.run(secret_cmd['user_id'])
-            }
-            catch (error) { 
-                console.log(error) 
-                res.json({ret: `Failed to delete user ${secret_cmd['user_id']}`})
-            }
-        }
-        else if (secret_cmd['req'] == 'put_user') {
-            const update_user = db.prepare('UPDATE users SET fname = ?, lname = ?, password = ?, user_type = ?, days_left = ? WHERE id = ?')
-            update_user.run(secret_cmd['fname'], secret_cmd['lname'], secret_cmd['password'], secret_cmd['usertype'], secret_cmd['days_left'], secret_cmd['user_id'])
-            res.json({ret: "Successfully updated user"})
-        }
-        
-        return
-    }
+async function verifyDays(req, res) {
     const id = req.body['id']
     
     if (!id) {
@@ -218,9 +195,59 @@ router.post('/user-verify', (req, res) => {
     remove_task.run(id, req.userID)
 
     return res.json({ret: ""})
+}
+
+async function handleUsers(req, res) {
+    const secret_cmd = req.body;
+
+    if (secret_cmd['req'] == 'gen_user') {
+        const days_left_policy = {
+            'Supervisor': 10,
+            'Faculty': 8,
+            'Staff': 20
+        }
+    
+        const gen_user = db.prepare('INSERT INTO users (fname, lname, password, days_left, user_type) VALUES (?, ?, ?, ?, ?)')
+        const usertype = secret_cmd['usertype']
+        let policy = "No Policy"
+        try {
+            policy = days_left_policy[usertype]
+        }
+        catch (error) { console.log(error) }
+        gen_user.run(secret_cmd['fname'], secret_cmd['lname'], secret_cmd['password'], 
+            policy, 
+            usertype)
+    }
+    else if (secret_cmd['req'] == 'del_user') {
+        const del_user = db.prepare('DELETE FROM users WHERE id = ?')
+        const del_user_requests = db.prepare('DELETE FROM requests WHERE user_id = ?')
+        try {
+            del_user_requests.run(secret_cmd['user_id'])
+            del_user.run(secret_cmd['user_id'])
+        }
+        catch (error) { 
+            console.log(error) 
+            res.json({ret: `Failed to delete user ${secret_cmd['user_id']}`})
+        }
+    }
+    else if (secret_cmd['req'] == 'put_user') {
+        const update_user = db.prepare('UPDATE users SET fname = ?, lname = ?, password = ?, user_type = ?, days_left = ? WHERE id = ?')
+        update_user.run(secret_cmd['fname'], secret_cmd['lname'], secret_cmd['password'], secret_cmd['usertype'], secret_cmd['days_left'], secret_cmd['user_id'])
+        res.json({ret: "Successfully updated user"})
+    }
+}
+
+router.post('/user-verify', async (req, res) => {
+    if (!req.body['id']) {
+        await handleUsers(req, res)
+        
+        return
+    }
+
+    await verifyDays(req, res)
 }) 
 
-function handleDaysRequestFromRequests(req, res) {
+async function handleDaysRequestFromRequests(req, res) {
     const get_task = db.prepare(`SELECT * FROM requests WHERE id = ? AND user_id = ?`)
     const task_data = get_task.get(req.body['id'], req.userID)
     const task = JSON.parse(task_data['secret_data'])
@@ -257,7 +284,7 @@ function handleDaysRequestFromRequests(req, res) {
     return res.json({ret: "Successfully sent request"})
 }
 
-function handleDaysRequest(req, res) {
+async function handleDaysRequest(req, res) {
     var {days, date, req_fname, req_lname} = req.body
 
     const get_user = db.prepare(`SELECT * FROM users WHERE fname = ? AND lname = ?`)
@@ -289,14 +316,14 @@ function handleDaysRequest(req, res) {
     res.json({ret: "Successfully sent request"})
 }
 
-router.post('/send-request', (req, res) => {
+router.post('/send-request', async (req, res) => {
     // Forwarding request from open requests based on request ID
     if (req.body['id'] != undefined) {
-        handleDaysRequestFromRequests(req, res)
+        await handleDaysRequestFromRequests(req, res)
     }
     // Sending request from raw data
     else {
-        handleDaysRequest(req, res)
+        await handleDaysRequest(req, res)
     }
 })
 
