@@ -27,20 +27,7 @@ async function loadHRDashboard(req, res, user, modifiedContent) {
     modifiedContent = fileContent.replaceAll('Not Available', user.days_left).replaceAll("NAME", user.fname);
 
     let replaceText = ""
-    const selectAllRequests = db.prepare(`SELECT * FROM requests WHERE completed = 0 AND userID = ?`);
-    const requests = selectAllRequests.all(req.userID);
-    for (const row of requests) {
-        replaceText += `
-        <div class="request" id="request${row.id}">
-            <p id="${row.id}p">${row.name}</p>
-            <button id="${row.id}b" class="verify-request" onclick="execRequest(this.id)">Verify Request</button>
-        </div>`
-    }
-    if (replaceText == "") {
-        replaceText = "No Requests"
-    }
-
-    modifiedContent = modifiedContent.replaceAll("REQUESTS", replaceText).replaceAll("ID_VALUE", req.userID)
+    modifiedContent = modifiedContent.replaceAll("ID_VALUE", req.userID)
 
     replaceText = ""
     const selectAllUsers = db.prepare(`SELECT * FROM users`);
@@ -69,7 +56,7 @@ async function loadHRDashboard(req, res, user, modifiedContent) {
                     <option value="Staff" ${row.user_type === 'Staff' ? 'selected' : ''}>Staff</option>
                 </select><br><br>
                 <label for="n${row.id}days">Days left:</label>
-                <input type="number" value="${row.days_left}" id="n${row.id}days" class="usertype">
+                <input type="number" step="any" value="${row.days_left}" id="n${row.id}days" class="usertype">
                 <input type="submit" value="Submit">
             </form>
             `
@@ -113,6 +100,7 @@ async function loadSuperDashboard(req, res, user, modifiedContent) {
         <div class="request" id="request${row.id}">
             <p id="${row.id}p">${row.name}</p>
             <button id="${row.id}b" class="verify-request" onclick="execRequest(this.id)">Verify Request</button>
+            <button id="${row.id}b" class="verify-request" onclick="deleteRequest(this.id)">Deny</button>
         </div>`
     }
     if (replaceText == "") {
@@ -177,7 +165,7 @@ function verifyDays(req, res) {
         return res.json({ret: "Failed to commit task, task format was invalid."})
     }
 
-    if (secretCmd['req'] == 'take_days' && req.userID == 1) {
+    if (secretCmd['req'] == 'take_days') {
         const decreaseDays = db.prepare(`UPDATE users SET days_left = ? WHERE id = ?`);
         const getUser = db.prepare(`SELECT * FROM users WHERE id = ?`);
         const user = getUser.get(secretCmd['id']);
@@ -209,7 +197,8 @@ function handleUsers(req, res) {
             const days_left_policy = {
                 'Supervisor': 10,
                 'Faculty': 8,
-                'Staff': 20
+                'Support Staff': 23,
+                'Professional Staff':28
             }
         
             const gen_user = db.prepare('INSERT INTO users (fname, lname, password, days_left, user_type) VALUES (?, ?, ?, ?, ?)')
@@ -280,11 +269,12 @@ function handleDaysRequestFromRequests(req, res) {
     const getUserById = db.prepare(`SELECT * FROM users WHERE id = ?`)
     const originalUser = getUserById.get(task['id'])
     
-    const postRequest = db.prepare(`INSERT INTO requests (userID, name, secret_data) VALUES (?, ?, ?)`)
+    const postRequest = db.prepare(`INSERT INTO requests (userID, name, secret_data, completed) VALUES (?, ?, ?, ?)`)
     let message = `Request from ${originalUser.fname} ${originalUser.lname} to take ${days} days off starting from ${date}`;
     if (days == 0.5) {
         message = `Request from ${originalUser.fname} ${originalUser.lname} to take a half day off on ${date}`
     }
+
     postRequest.run(
         userID, 
         message, 
@@ -292,8 +282,9 @@ function handleDaysRequestFromRequests(req, res) {
             req: "take_days",
             id: task['id'],
             days: days,
-            date: date
-        }));
+            date: date,
+        }),
+        1);
 
     const removeTask = db.prepare(`UPDATE requests SET completed = 1 WHERE id = ? AND userID = ?`)
     removeTask.run(req.body['id'], req.userID)

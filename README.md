@@ -43,7 +43,7 @@ The product is designed for ease of use. As such, usage is very simple and highl
 ### Database
 
 The system uses SQLite to store all user data:
-    * The database uses two seperate tables: users storing all user data (i.e. passwords, names, days left) and requests, storing all requests sent to that account
+    *The database uses two seperate tables: users storing all user data (i.e. passwords, names, days left) and requests, storing all requests sent to that account
     * The database is initialized in the `db.js` file:
         1. If no `database.sqlite` file is found, it automatically creates a new database and links it to the `database.sqlite` file (this database is automatically loaded with the HR user from the `.env` credentials)
         2. If found, the database is simply loaded from the file

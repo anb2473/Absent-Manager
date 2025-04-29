@@ -102,7 +102,7 @@
         .no-days-left {
             color: #d9534f;
             justify-self: center;
-            padding: 30px; 
+            margin-bottom: 30px; 
             font-size: 2rem;
             text-align: center;
         }
@@ -263,10 +263,10 @@
             try {
                 if (daysLeftElement) {
                     const daysLeftText = daysLeftElement.textContent.split('<span>')[0].trim();
-                    const daysLeft = parseInt(daysLeftText);
+                    const daysLeft = parseFloat(daysLeftText);
                     if (isNaN(daysLeft)) {
                         throw new Error("Non int days (NA)");
-                    }
+                   }
                     const daysSelect = document.getElementById("days");
                     const bg = document.querySelector(".bg");
                     if (daysLeft <= 0) {

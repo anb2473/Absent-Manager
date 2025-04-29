@@ -241,52 +241,6 @@
 
     <main>
         <div class="centered">
-            <h1>All Requests</h1>
-
-            <div class="bg">
-
-                REQUESTS
-
-                <p id="success"></p>
-
-            </div>
-
-            <script>
-                async function execRequest(id) {
-                    const idNum = id.replace("b", "");
-    
-                    const button = document.getElementById(`${idNum}b`)
-                    const p = document.getElementById(`${idNum}p`)
-    
-                    const main = document.getElementById(`request${idNum}`);
-    
-                    main.removeChild(button);
-                    p.style.textDecoration = 'line-through';
-                    p.style.color = "#d9534f";
-    
-                    const success = document.getElementById("success")
-    
-                    ret = await fetch('/user/user-verify?id=ID_VALUE', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({id: idNum, userfname: 'HR', userlname: 'user'}),
-                    }).then(response => {
-                        if (!response.ok) {
-                            return response.json().catch(() => ({ ret: "Failed to finish task due to a server error." }));
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        success.textContent = data['ret'];
-                    })
-                    .catch(error => {
-                        success.textContent = `Failed to finish task due to an unforseen error. (${error})`;
-                    });
-                }
-            </script>
-
             <h1>Users</h1>
 
             <div class="bg">
@@ -441,7 +395,12 @@
                 <script>
                     function deleteRequest(id) {
                         const idNum = id.replace("b", "");
+                        const p = document.getElementById(`${idNum}p`)
                         const err = document.getElementById(`${idNum}err`)
+
+                        p.style.textDecoration = 'line-through';
+                        p.style.color = "#d9534f";
+
                         fetch('/user/user-verify?id=ID_VALUE', {
                             method: 'POST',
                             headers: {
@@ -458,6 +417,8 @@
                         })
                         .then(data => {
                             if (data) {
+                                p.style.textDecoration = 'line-through';
+                                p.style.color = "#d9534f";  
                                 err.textContent = data.ret;
                             }
                         })
