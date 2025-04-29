@@ -437,6 +437,36 @@
 
             <div class="bg">
                 ALL_APPROVED
+
+                <script>
+                    function deleteRequest(id) {
+                        const idNum = id.replace("b", "");
+                        const err = document.getElementById(`${idNum}err`)
+                        fetch('/user/user-verify?id=ID_VALUE', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({id_num: idNum, req: 'del_req'}),
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                err.textContent = "Failed to finish task due to a server error";
+                                return;
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data) {
+                                err.textContent = data.ret;
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            err.textContent = `Failed to finish task due to an unforeseen error. (${error})`;
+                        });
+                    }
+                </script>
             </div>
         </div>
     </main>

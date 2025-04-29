@@ -86,7 +86,9 @@ async function loadHRDashboard(req, res, user, modifiedContent) {
     for (const row of approvedRequests) {
         replaceText += `
         <div class="request" id="request${row.id}">
+            <p id="${row.id}err"></p>
             <p id="${row.id}p">${row.name}</p>
+            <button id="${row.id}b" class="verify-request" onclick="deleteRequest(this.id)">Delete Request</button>
         </div>`
     }
     if (replaceText == "") {
@@ -124,7 +126,9 @@ async function loadSuperDashboard(req, res, user, modifiedContent) {
     for (const row of approvedRequests) {
         replaceText += `
         <div class="request" id="request${row.id}">
+            <p id="${row.id}err"></p>
             <p id="${row.id}p">${row.name}</p>
+            <button id="${row.id}b" class="verify-request" onclick="deleteRequest(this.id)">Delete Request</button>
         </div>`
     }
     if (replaceText == "") {
@@ -200,40 +204,53 @@ function verifyDays(req, res) {
 function handleUsers(req, res) {
     const secretCmd = req.body;
 
-    if (secretCmd['req'] == 'gen_user') {
-        const days_left_policy = {
-            'Supervisor': 10,
-            'Faculty': 8,
-            'Staff': 20
-        }
-    
-        const gen_user = db.prepare('INSERT INTO users (fname, lname, password, days_left, user_type) VALUES (?, ?, ?, ?, ?)')
-        const usertype = secretCmd['usertype']
-        let policy = "No Policy"
-        try {
-            policy = days_left_policy[usertype]
-        }
-        catch (error) { console.log(error) }
-        gen_user.run(secretCmd['fname'], secretCmd['lname'], secretCmd['password'], 
-            policy, 
-            usertype)
-    }
-    else if (secretCmd['req'] == 'del_user') {
-        const del_user = db.prepare('DELETE FROM users WHERE id = ?')
-        const del_user_requests = db.prepare('DELETE FROM requests WHERE userID = ?')
-        try {
-            del_user_requests.run(secretCmd['userID'])
-            del_user.run(secretCmd['userID'])
-        }
-        catch (error) { 
-            console.log(error) 
-            res.json({ret: `Failed to delete user ${secretCmd['userID']}`})
-        }
-    }
-    else if (secretCmd['req'] == 'put_user') {
-        const update_user = db.prepare('UPDATE users SET fname = ?, lname = ?, password = ?, user_type = ?, days_left = ? WHERE id = ?')
-        update_user.run(secretCmd['fname'], secretCmd['lname'], secretCmd['password'], secretCmd['usertype'], secretCmd['days_left'], secretCmd['userID'])
-        res.json({ret: "Successfully updated user"})
+    switch (secretCmd['req']) {
+        case 'gen_user':
+            const days_left_policy = {
+                'Supervisor': 10,
+                'Faculty': 8,
+                'Staff': 20
+            }
+        
+            const gen_user = db.prepare('INSERT INTO users (fname, lname, password, days_left, user_type) VALUES (?, ?, ?, ?, ?)')
+            const usertype = secretCmd['usertype']
+            let policy = "No Policy"
+            try {
+                policy = days_left_policy[usertype]
+            }
+            catch (error) { console.log(error) }
+            gen_user.run(secretCmd['fname'], secretCmd['lname'], secretCmd['password'], 
+                policy, 
+                usertype)
+            break;
+            
+        case 'del_user':
+            const del_user = db.prepare('DELETE FROM users WHERE id = ?')
+            const del_user_requests = db.prepare('DELETE FROM requests WHERE userID = ?')
+            try {
+                del_user_requests.run(secretCmd['userID'])
+                del_user.run(secretCmd['userID'])
+            }
+            catch (error) { 
+                console.log(error) 
+                res.json({ret: `Failed to delete user ${secretCmd['userID']}`})
+            }
+            break;
+            
+        case 'put_user':
+            const update_user = db.prepare('UPDATE users SET fname = ?, lname = ?, password = ?, user_type = ?, days_left = ? WHERE id = ?')
+            update_user.run(secretCmd['fname'], secretCmd['lname'], secretCmd['password'], secretCmd['usertype'], secretCmd['days_left'], secretCmd['userID'])
+            res.json({ret: "Successfully updated user"})
+            break;
+            
+        case 'del_req':
+            const del_req = db.prepare('DELETE FROM requests WHERE id = ?')
+            del_req.run(secretCmd['id_num'])
+            break;
+            
+        default:
+            console.log(`Unknown request type: ${secretCmd['req']}`)
+            break;
     }
 }
 
