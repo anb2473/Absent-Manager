@@ -15,6 +15,7 @@ if (!dbExists) {
             lname TEXT,
             days_left REAL,
             user_type TEXT,
+            user_view TEXT,
             password TEXT
         )
     `)
@@ -30,8 +31,18 @@ if (!dbExists) {
         )
     `)
 
+    db.exec(`
+        CREATE TABLE request_status (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            userID INTEGER,
+            name TEXT,
+            status TEXT,
+            FOREIGN KEY(userID) REFERENCES users(id)
+        )
+    `)
+
     // USER TYPES: HR (human resources user), Faculty (faculty user), Staff (staff user), Supervisor (supervisor)
-    const addUser = db.prepare(`INSERT INTO users (fname, lname, password, days_left, user_type) VALUES (?, ?, ?, ?, ?)`);
+    const addUser = db.prepare(`INSERT INTO users (fname, lname, password, days_left, user_view) VALUES (?, ?, ?, ?, ?)`);
     addUser.run(process.env.HR_FNAME || "HR", process.env.LR_FNAME || "user", process.env.HR_PASSWORD || "password", -1, "HR")
 }
 

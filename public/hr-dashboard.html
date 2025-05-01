@@ -289,10 +289,10 @@
                     function toggleForm(id) {
                         const form = document.getElementById(`${id}form`);
                         
-                        if (form.style.height === '90vh') {
+                        if (form.style.height === '100vh') {
                             form.style.height = '0';
                         } else {
-                            form.style.height = '90vh';
+                            form.style.height = '100vh';
                         }
                     }
                     
@@ -311,6 +311,7 @@
                             password: form.querySelector(`#n${id}password`).value,
                             usertype: form.querySelector(`#n${id}usertype`).value,
                             days_left: form.querySelector(`#n${id}days`).value,
+                            userview: form.querySelector(`#n${id}userview`).checked ? 'Supervisor' : 'Normal',
                             userID: id
                         };
                         
@@ -353,10 +354,15 @@
                     <input type="text" id="password" name="password"><br><br>
                     <label for="usertype">User type:</label>
                     <select name="usertype" id="usertype">
-                        <option value="Supervisor">Supervisor</option>
                         <option value="Faculty">Faculty</option>
-                        <option value="Staff">Staff</option>
-                    </select>
+                        <option value="Support Staff">Support Staff</option>
+                        <option value="Professional Staff">Professional Staff</option>
+                        <option value="Admin">Admin</option>
+                    </select><br><br>
+                    <label for="userview">
+                        <input type="checkbox" id="userview" name="userview">
+                        Supervisor
+                    </label><br>
                     <input type="submit" value="Submit">
                 </form>
 
@@ -370,6 +376,7 @@
                             lname: document.getElementById('lname').value,
                             password: document.getElementById('password').value,
                             usertype: document.getElementById('usertype').value,
+                            userview: document.getElementById('userview').checked ? 'Supervisor' : 'Normal'
                         };
                         
                         fetch('/user/user-verify?id=ID_VALUE', {
@@ -395,12 +402,12 @@
                 <script>
                     function deleteRequest(id) {
                         const idNum = id.replace("b", "");
-                        const p = document.getElementById(`${idNum}p`)
                         const err = document.getElementById(`${idNum}err`)
-
+                        const p = document.getElementById(`${idNum}p`)
                         p.style.textDecoration = 'line-through';
                         p.style.color = "#d9534f";
-
+                        const b = document.getElementById(`${idNum}b`)
+                        b.style.display = 'none'
                         fetch('/user/user-verify?id=ID_VALUE', {
                             method: 'POST',
                             headers: {
@@ -417,8 +424,6 @@
                         })
                         .then(data => {
                             if (data) {
-                                p.style.textDecoration = 'line-through';
-                                p.style.color = "#d9534f";  
                                 err.textContent = data.ret;
                             }
                         })

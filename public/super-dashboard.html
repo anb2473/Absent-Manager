@@ -382,11 +382,13 @@
                     const idNum = id.replace("b", "");
     
                     const button = document.getElementById(`${idNum}b`)
+                    const deny = document.getElementById(`${idNum}fail`)
                     const p = document.getElementById(`${idNum}p`)
     
                     const main = document.getElementById(`request${idNum}`);
     
                     main.removeChild(button);
+                    main.removeChild(deny);
                     p.style.textDecoration = 'line-through';
                     p.style.color = "#d9534f";
     
@@ -397,7 +399,7 @@
                         headers: {
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({id: idNum, userfname: 'HR', userlname: 'user'}),
+                        body: JSON.stringify({id: idNum}),
                     }).then(response => {
                         if (!response.ok) {
                             return response.json().catch(() => ({ ret: "Failed to finish task due to a server error." }));
@@ -406,6 +408,17 @@
                     })
                     .then(data => {
                         success.textContent = data['ret'];
+                    })
+                    .catch(error => {
+                        success.textContent = `Failed to finish task due to an unforseen error. (${error})`;
+                    });
+
+                    ret = await fetch('/user/pend-request?id=ID_VALUE', {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({id: idNum, status: 'Approved', name: p.textContent}),
                     })
                     .catch(error => {
                         success.textContent = `Failed to finish task due to an unforseen error. (${error})`;
@@ -453,6 +466,87 @@
             function deleteRequest(id) {
                 const idNum = id.replace("b", "");
                 const err = document.getElementById(`${idNum}err`)
+                const p = document.getElementById(`${idNum}p`)
+                p.style.textDecoration = 'line-through';
+                p.style.color = "#d9534f";
+                const b = document.getElementById(`${idNum}b`)
+                b.style.display = 'none'
+                fetch('/user/user-verify?id=ID_VALUE', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({id_num: idNum, req: 'del_req'}),
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        err.textContent = "Failed to finish task due to a server error";
+                        return;
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data) {
+                        err.textContent = data.ret;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    err.textContent = `Failed to finish task due to an unforeseen error. (${error})`;
+                });
+            }
+
+            async function denyRequest(id) {
+                const idNum = id.replace("fail", "");
+                const err = document.getElementById(`${idNum}err`)
+                const p = document.getElementById(`${idNum}p`)
+                p.style.textDecoration = 'line-through';
+                p.style.color = "#d9534f";
+                const b = document.getElementById(`${idNum}b`)
+                const fail = document.getElementById(`${idNum}fail`)
+                b.style.display = 'none'
+                fail.style.display = 'none'
+
+                ret = await fetch('/user/pend-request?id=ID_VALUE', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({id: idNum, status: 'Denied', name: p.textContent}),
+                })
+                .catch(error => {
+                    success.textContent = `Failed to finish task due to an unforseen error. (${error})`;
+                });
+                
+                fetch('/user/send-request?id=ID_VALUE', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({id: idNum}),
+                    redirect: 'follow'
+                })
+                .then(async response => {
+                    if (response.redirected) {
+                        // If the response contains a redirect, navigate to that URL
+                        window.location.href = response.url;
+                    } else {
+                        // Handle non-redirect response if needed
+                        const jsonData = await response.json();
+
+                        success.textContent = jsonData['ret'];
+                        if (success.textContent.startsWith('Success')) {
+                            success.style.color = '#5cb85c';
+                        } else {
+                            success.style.color = '#d9534f';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    success.textContent = 'Submission failed';
+                });
+
                 fetch('/user/user-verify?id=ID_VALUE', {
                     method: 'POST',
                     headers: {

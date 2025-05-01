@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
     <style>
-        /* Removing padding to remove unintended side effects and allow cross browser scalability */
         *,
         *::before,
         *::after {
@@ -22,10 +21,16 @@
             background-color: #f4f4f4;
             margin: 0;
             overflow-x: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background-color: #f4f4f4;
+            margin: 0;
         }
-
+        
         main {
-            padding-bottom: 250px;
+            padding-bottom: 100px;
         }
 
         .bg {
@@ -33,7 +38,6 @@
             border: 1px solid #ccc;
             box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.3);
             padding: 30px;
-            transform: translateY(20vh);
             width: 75%;
             background-color: white;
             border-radius: 20px;
@@ -43,8 +47,16 @@
             gap: 15px;
         }
 
+        @media (max-width: 768px) {
+            .bg {
+                width: 100%;
+                padding: 15px;
+                border-radius: 8px
+            }
+        }
+
         .bg:hover {
-            transform: translateY(20vh) scale(1.05);
+            transform: scale(1.05);
         }
 
         @media (max-width: 768px) {
@@ -149,6 +161,18 @@
             outline: none;
         }
 
+        .centered {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 50px;
+        }
+
+        .centered h1 {
+            margin-top: 70px;
+            margin-bottom: 20px;
+        }
+
         input[type="submit"] {
             background-color: #5cb85c;
             color: white;
@@ -187,6 +211,47 @@
             text-align: center;
             margin-top: 20px;
         }
+
+        .request {
+            padding: 25px;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+        }
+
+        .request p {
+            padding-top: 10px;
+        }
+
+        @media (max-width: 900px) {
+            .request {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .request button {
+                padding: 25px;
+                margin: 10px;
+            }
+
+            .request {
+                border: 2px solid #e5e5e5;
+                margin: 15px;
+                border-radius: 20px;
+                background-color: #fdfdfd
+            }
+        }
+
+        .verify-request {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease-in-out;
+        }
     </style>
 </head>
 <body>
@@ -198,111 +263,182 @@
     </header>
 
     <main>
-        <div class="bg">
-            <form action="/user/send-request?id=ID_VALUE" onsubmit="submitForm(event)">
-                <label for="days">Days absent:</label>
-                <select name="days" id="days"> </select>
-                <label for="date">Date:</label>
-                <input type="date" id="date" name="date">
-                <label for="supervisor">Supervisor:</label>
-                <input type="fname" id="fname" name="fname">
-                <input type="lname" id="lname" name="lname">
-                <input type="submit" value="Submit">
-            </form>
+        <div class="centered">
+            <div class="bg">
+                <form action="/user/send-request?id=ID_VALUE" onsubmit="submitForm(event)">
+                    <label for="days">Days absent:</label>
+                    <select name="days" id="days"> </select>
+                    <label for="date">Date:</label>
+                    <input type="date" id="date" name="date">
+                    <label for="supervisor">Supervisor:</label>
+                    <input type="fname" id="fname" name="fname">
+                    <input type="lname" id="lname" name="lname">
+                    <input type="submit" value="Submit">
+                </form>
 
-            <h1 class="err" id="err"></h1>
+                <h1 class="err" id="err"></h1>
+
+                <script>
+                    function submitForm(event) {    
+                        event.preventDefault();
+                            
+                        const formData = {
+                            days: document.getElementById('days').value,
+                            date: document.getElementById('date').value,
+                            req_fname: document.getElementById('fname').value,
+                            req_lname: document.getElementById('lname').value
+                        };
+                        
+                        // Send the main request
+                        fetch('/user/send-request?id=ID_VALUE', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(formData),
+                            redirect: 'follow'
+                        })
+                        .then(async response => {
+                            if (response.redirected) {
+                                window.location.href = response.url;
+                            } else {
+                                const jsonData = await response.json();
+                                const err = document.getElementById('err');
+                                err.textContent = jsonData['ret'];
+                                if (err.textContent.startsWith('Success')) {
+                                    err.style.color = '#5cb85c'; // Green for success
+                                } else {
+                                    err.style.color = '#d9534f'; // Red for error
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            document.getElementById('err').textContent = 'Submission failed';
+                        });
+
+                        // Send the pending request independently
+                        fetch('/user/pend-request?id=ID_VALUE', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(formData),
+                            redirect: 'follow'
+                        })
+                        .then(response => {
+                            if (response.redirected) {
+                                window.location.href = response.url;
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                        });
+                    }
+                    </script>
+
+                <h1 class="no-days-left" id="no-days-left">You have no days left</h1>
+            </div>
 
             <script>
-                function submitForm(event) {    
-                    event.preventDefault();
-                          
-                    const formData = {
-                        days: document.getElementById('days').value,
-                        date: document.getElementById('date').value,
-                        req_fname: document.getElementById('fname').value,
-                        req_lname: document.getElementById('lname').value
-                    };
-                    
-                    fetch('/user/send-request?id=ID_VALUE', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(formData),
-                        redirect: 'follow'
-                    })
-                    .then(async response => {
-                        if (response.redirected) {
-                            // If the response contains a redirect, navigate to that URL
-                            window.location.href = response.url;
-                        } else {
-                            // Handle non-redirect response if needed
-                            const jsonData = await response.json();
-
-                            const err = document.getElementById('err');
-                            err.textContent = jsonData['ret'];
-                            if (err.textContent.startsWith('Success')) {
-                                err.style.color = '#5cb85c'; // Green for success
-                            } else {
-                                err.style.color = '#d9534f'; // Red for error
-                            }
+                const daysLeftElement = document.querySelector(".days-left");
+                try {
+                    if (daysLeftElement) {
+                        const daysLeftText = daysLeftElement.textContent.split('<span>')[0].trim();
+                        const daysLeft = parseFloat(daysLeftText);
+                        if (isNaN(daysLeft)) {
+                            throw new Error("Non int days (NA)");
+                    }
+                        const daysSelect = document.getElementById("days");
+                        const bg = document.querySelector(".bg");
+                        if (daysLeft <= 0) {
+                            const form = document.querySelector('form');
+                            bg.removeChild(form)
                         }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        document.getElementById('err').textContent = 'Submission failed';
-                    });
-                }
-                </script>
+                        else {
+                            const warning = document.querySelector(".no-days-left");
+                            bg.removeChild(warning);
+                        }
 
-            <h1 class="no-days-left" id="no-days-left">You have no days left</h1>
-        </div>
+                        const halfOption = document.createElement("option");
+                        halfOption.value = "half";
+                        halfOption.textContent = "Half Day";
+                        daysSelect.appendChild(halfOption);
 
-        <script>
-            const daysLeftElement = document.querySelector(".days-left");
-            try {
-                if (daysLeftElement) {
-                    const daysLeftText = daysLeftElement.textContent.split('<span>')[0].trim();
-                    const daysLeft = parseFloat(daysLeftText);
-                    if (isNaN(daysLeft)) {
-                        throw new Error("Non int days (NA)");
-                   }
-                    const daysSelect = document.getElementById("days");
-                    const bg = document.querySelector(".bg");
-                    if (daysLeft <= 0) {
+                        for (let i = 1; i <= daysLeft; i++) { // Changed loop condition to include 0
+                            const option = document.createElement("option");
+                            option.value = i;
+                            option.textContent = i;
+                            daysSelect.appendChild(option);
+                        }
+                    } else {
+                        const bg = document.querySelector(".bg");
                         const form = document.querySelector('form');
                         bg.removeChild(form)
                     }
-                    else {
-                        const warning = document.querySelector(".no-days-left");
-                        bg.removeChild(warning);
-                    }
-
-                    const halfOption = document.createElement("option");
-                    halfOption.value = "half";
-                    halfOption.textContent = "Half Day";
-                    daysSelect.appendChild(halfOption);
-
-                    for (let i = 1; i <= daysLeft; i++) { // Changed loop condition to include 0
-                        const option = document.createElement("option");
-                        option.value = i;
-                        option.textContent = i;
-                        daysSelect.appendChild(option);
-                    }
-                } else {
+                }
+                catch (err) {
+                    console.log(err)
                     const bg = document.querySelector(".bg");
                     const form = document.querySelector('form');
                     bg.removeChild(form)
+                    const warning = document.getElementById("no-days-left");
+                    warning.textContent = "Failed to load your days off, try reloading the page. If the error persists, contact tech."
+                    warning.style.fontSize = "1.5rem"
                 }
-            }
-            catch (err) {
-                console.log(err)
-                const bg = document.querySelector(".bg");
-                const form = document.querySelector('form');
-                bg.removeChild(form)
-                const warning = document.getElementById("no-days-left");
-                warning.textContent = "Failed to load your days off, try reloading the page. If the error persists, contact tech."
-                warning.style.fontSize = "1.5rem"
+            </script>
+
+            <h1><span style="color: #ffcc00; margin-right: 15px">○</span>Pending Requests</h1>
+
+            <div class="bg">
+                PENDING
+            </div>
+
+            <h1><span style="color: #d9534f; margin-right: 15px">✕</span>Denied Requests</h1>
+
+            <div class="bg">
+                DENIED
+            </div>
+
+            <h1><span style="color: #5cb85c; margin-right: 15px">✓</span>Approved Requests</h1>
+
+            <div class="bg">
+                APPROVED
+            </div>
+        </div>
+
+        <script>
+            function deleteRequest(id) {
+                const idNum = id.replace("b", "");
+                const err = document.getElementById(`${idNum}err`)
+                const p = document.getElementById(`${idNum}p`)
+                p.style.textDecoration = 'line-through';
+                p.style.color = "#d9534f";
+                const b = document.getElementById(`${idNum}b`)
+                b.style.display = 'none'
+                fetch('/user/pend-request?id=ID_VALUE', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({id: idNum}),
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        err.textContent = "Failed to finish task due to a server error";
+                        return;
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data) {
+                        err.textContent = data.ret;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    err.textContent = `Failed to finish task due to an unforeseen error. (${error})`;
+                });
             }
         </script>
     </main>

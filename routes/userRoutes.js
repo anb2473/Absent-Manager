@@ -17,6 +17,54 @@ async function loadFacStaffDashboard(req, res, user, modifiedContent) {
 
     modifiedContent = fileContent.replaceAll('Not Available', user.days_left).replaceAll("NAME", user.fname).replaceAll("ROLE", user.user_type).replaceAll("ID_VALUE", req.userID);
 
+    let replaceText = ""
+    const selectAllPendingRequests = db.prepare(`SELECT * FROM request_status WHERE userID = ? AND status = 'Pending'`)
+    const pendingRequests = selectAllPendingRequests.all(req.userID);
+    for (const row of pendingRequests) {
+        replaceText += `
+        <div class="request" id="request${row.id}">
+            <p id="${row.id}p">${row.name}</p>
+            <button id="${row.id}b" class="verify-request" onclick="deleteRequest(this.id)">Delete Request</button>
+        </div>
+        `
+    }
+    if (replaceText == "") {
+        replaceText = "No Pending Requests"
+    }
+    modifiedContent = modifiedContent.replaceAll('PENDING', replaceText)
+
+    replaceText = ""
+    const selectAllDeniedRequests = db.prepare(`SELECT * FROM request_status WHERE userID = ? AND status = 'Denied'`)
+    const deniedRequests = selectAllDeniedRequests.all(req.userID);
+    for (const row of deniedRequests) {
+        replaceText += `
+        <div class="request" id="request${row.id}">
+            <p id="${row.id}p">${row.name}</p>
+            <button id="${row.id}b" class="verify-request" onclick="deleteRequest(this.id)">Delete Request</button>
+        </div>
+        `
+    }
+    if (replaceText == "") {
+        replaceText = "No Denied Requests"
+    }
+    modifiedContent = modifiedContent.replaceAll('DENIED', replaceText)
+
+    replaceText = ""
+    const selectAllApprovedRequests = db.prepare(`SELECT * FROM request_status WHERE userID = ? AND status = 'Approved'`)
+    const approvedRequests = selectAllApprovedRequests.all(req.userID);
+    for (const row of approvedRequests) {
+        replaceText += `
+        <div class="request" id="request${row.id}">
+            <p id="${row.id}p">${row.name}</p>
+            <button id="${row.id}b" class="verify-request" onclick="deleteRequest(this.id)">Delete Request</button>
+        </div>
+        `
+    }
+    if (replaceText == "") {
+        replaceText = "No Approved Requests"
+    }
+    modifiedContent = modifiedContent.replaceAll('APPROVED', replaceText)
+
     return modifiedContent;
 }
 
@@ -51,10 +99,15 @@ async function loadHRDashboard(req, res, user, modifiedContent) {
                 <input type="text" id="n${row.id}password" name="password" value="${row.password}"><br><br>
                 <label for="n${row.id}usertype">User type:</label>
                 <select name="usertype" id="n${row.id}usertype" class="usertype">
-                    <option value="Supervisor" ${row.user_type === 'Supervisor' ? 'selected' : ''}>Supervisor</option>
                     <option value="Faculty" ${row.user_type === 'Faculty' ? 'selected' : ''}>Faculty</option>
-                    <option value="Staff" ${row.user_type === 'Staff' ? 'selected' : ''}>Staff</option>
+                    <option value="Support Staff" ${row.user_type === 'Support Staff' ? 'selected' : ''}>Support Staff</option>
+                    <option value="Professional Staff" ${row.user_type === 'Professional Staff' ? 'selected' : ''}>Professional Staff</option>
+                    <option value="Admin" ${row.user_type === 'Admin' ? 'selected' : ''}>Admin</option>
                 </select><br><br>
+                <label for="n${row.id}userview">
+                    <input type="checkbox" id="n${row.id}userview" name="userview" ${row.user_view === 'Supervisor' ? 'checked' : ''}>
+                    Supervisor
+                </label><br>
                 <label for="n${row.id}days">Days left:</label>
                 <input type="number" step="any" value="${row.days_left}" id="n${row.id}days" class="usertype">
                 <input type="submit" value="Submit">
@@ -63,7 +116,7 @@ async function loadHRDashboard(req, res, user, modifiedContent) {
         }
     }
     if (replaceText == "") {
-        replaceText = "No Requests"
+        replaceText = "No User"
     }
     modifiedContent = modifiedContent.replaceAll("USERS", replaceText)
 
@@ -100,7 +153,7 @@ async function loadSuperDashboard(req, res, user, modifiedContent) {
         <div class="request" id="request${row.id}">
             <p id="${row.id}p">${row.name}</p>
             <button id="${row.id}b" class="verify-request" onclick="execRequest(this.id)">Verify Request</button>
-            <button id="${row.id}b" class="verify-request" onclick="deleteRequest(this.id)">Deny</button>
+            <button id="${row.id}fail" class="verify-request" onclick="denyRequest(this.id)">Deny</button>
         </div>`
     }
     if (replaceText == "") {
@@ -136,13 +189,13 @@ router.get('/dashboard', async (req, res) => {
     const user = getUser.get(req.userID)
 
     let modifiedContent = "500";
-    if (user.user_type != 'HR' && user.user_type != 'Supervisor') {
+    if (user.user_view != 'HR' && user.user_view != 'Supervisor') {
         modifiedContent = await loadFacStaffDashboard(req, res, user, modifiedContent)
     }
-    else if (user.user_type == 'HR') {
+    else if (user.user_view == 'HR') {
         modifiedContent = await loadHRDashboard(req, res, user, modifiedContent)
     }
-    else if (user.user_type == 'Supervisor') {
+    else if (user.user_view == 'Supervisor') {
         modifiedContent = await loadSuperDashboard(req, res, user, modifiedContent)
     }
 
@@ -195,22 +248,23 @@ function handleUsers(req, res) {
     switch (secretCmd['req']) {
         case 'gen_user':
             const days_left_policy = {
-                'Supervisor': 10,
                 'Faculty': 8,
                 'Support Staff': 23,
-                'Professional Staff':28
+                'Professional Staff':28,
+                'Admin': 33
             }
         
-            const gen_user = db.prepare('INSERT INTO users (fname, lname, password, days_left, user_type) VALUES (?, ?, ?, ?, ?)')
+            const gen_user = db.prepare('INSERT INTO users (fname, lname, password, days_left, user_type, user_view) VALUES (?, ?, ?, ?, ?, ?)')
             const usertype = secretCmd['usertype']
+            const userview = secretCmd['userview']
             let policy = "No Policy"
             try {
                 policy = days_left_policy[usertype]
             }
             catch (error) { console.log(error) }
-            gen_user.run(secretCmd['fname'], secretCmd['lname'], secretCmd['password'], 
-                policy, 
-                usertype)
+            gen_user.run(
+                secretCmd['fname'], secretCmd['lname'], secretCmd['password'], 
+                policy, usertype, userview)
             break;
             
         case 'del_user':
@@ -227,11 +281,10 @@ function handleUsers(req, res) {
             break;
             
         case 'put_user':
-            const update_user = db.prepare('UPDATE users SET fname = ?, lname = ?, password = ?, user_type = ?, days_left = ? WHERE id = ?')
-            update_user.run(secretCmd['fname'], secretCmd['lname'], secretCmd['password'], secretCmd['usertype'], secretCmd['days_left'], secretCmd['userID'])
+            const update_user = db.prepare('UPDATE users SET fname = ?, lname = ?, password = ?, user_type = ?, user_view = ?, days_left = ? WHERE id = ?')
+            update_user.run(secretCmd['fname'], secretCmd['lname'], secretCmd['password'], secretCmd['usertype'], secretCmd['userview'], secretCmd['days_left'], secretCmd['userID'])
             res.json({ret: "Successfully updated user"})
             break;
-            
         case 'del_req':
             const del_req = db.prepare('DELETE FROM requests WHERE id = ?')
             del_req.run(secretCmd['id_num'])
@@ -289,7 +342,7 @@ function handleDaysRequestFromRequests(req, res) {
     const removeTask = db.prepare(`UPDATE requests SET completed = 1 WHERE id = ? AND userID = ?`)
     removeTask.run(req.body['id'], req.userID)
 
-    return res.json({ret: "Successfully sent request"})
+    return res.json({ret: "Successfully processed request"})
 }
 
 function handleDaysRequest(req, res) {
@@ -321,7 +374,7 @@ function handleDaysRequest(req, res) {
             date: date
         }));
 
-    res.json({ret: "Successfully sent request"})
+    res.json({ret: "Successfully processed request"})
 }
 
 router.post('/send-request', async (req, res) => {
@@ -333,6 +386,31 @@ router.post('/send-request', async (req, res) => {
     else {
         await handleDaysRequest(req, res)
     }
+})
+
+router.post('/pend-request', (req, res) => {
+    const postRequest = db.prepare(`INSERT INTO request_status (userID, name, status) VALUES (?, ?, ?)`)
+    postRequest.run(req.userID, 
+    `Pending for request to take ${req.body['days']} days off at ${req.body['date']}`, 
+    'Pending')
+    res.send(200)
+})
+
+router.delete('/pend-request', (req, res) => {
+    const delRequest = db.prepare(`DELETE FROM request_status WHERE id = ?`)
+    delRequest.run(req.body['id'])
+    res.send(200)
+})
+
+router.put('/pend-request', (req, res) => {
+    const getRequest = db.prepare(`SELECT * FROM requests WHERE id = ?`)
+    const id = req.body['id']
+    const request = getRequest.get(id)
+    const secretCmd = JSON.parse(request.secret_data)
+    const userID = secretCmd['id']
+    const insertRequest = db.prepare(`INSERT INTO request_status (userID, name, status) VALUES (?, ?, ?)`)
+    insertRequest.run(userID, req.body['name'].replace("Request", `${req.body['status']} request`), req.body['status'])
+    res.send(200)
 })
 
 export default router;
