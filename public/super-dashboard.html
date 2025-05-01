@@ -276,19 +276,50 @@
                     <input type="submit" value="Submit">
                 </form>
 
-                <h1 class="err"></h1>
+                <h1 class="err" id="err"></h1>
+
 
                 <script>
-                    function submitForm(event) {    
+                    async function submitForm(event) {    
                         event.preventDefault();
-                            
+                        let pendingId = null;
+
                         const formData = {
                             days: document.getElementById('days').value,
                             date: document.getElementById('date').value,
                             req_fname: document.getElementById('fname').value,
-                            req_lname: document.getElementById('lname').value
+                            req_lname: document.getElementById('lname').value,
+        
                         };
+
+                        // Send the pending request independently
+                        await fetch('/user/pend-request?id=ID_VALUE', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(formData),
+                            redirect: 'follow'
+                        })
+                        .then(response => {
+                            if (response.redirected) {
+                                window.location.href = response.url;
+                            } else {
+                                return response.text().then(text => {
+                                    const id = parseInt(text);
+                                    if (!isNaN(id)) {
+                                        pendingId = id;
+                                    }
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                        });
+
+                        formData['pending_id'] = pendingId
                         
+                        // Send the main request
                         fetch('/user/send-request?id=ID_VALUE', {
                             method: 'POST',
                             headers: {
@@ -299,14 +330,16 @@
                         })
                         .then(async response => {
                             if (response.redirected) {
-                                // If the response contains a redirect, navigate to that URL
                                 window.location.href = response.url;
                             } else {
-                                // Handle non-redirect response if needed
                                 const jsonData = await response.json();
-
-                                const err = document.querySelector('.err');
+                                const err = document.getElementById('err');
                                 err.textContent = jsonData['ret'];
+                                if (err.textContent.startsWith('Success')) {
+                                    err.style.color = '#5cb85c'; // Green for success
+                                } else {
+                                    err.style.color = '#d9534f'; // Red for error
+                                }
                             }
                         })
                         .catch(error => {
@@ -314,7 +347,7 @@
                             document.getElementById('err').textContent = 'Submission failed';
                         });
                     }
-                    </script>
+                </script>
 
                 <h1 class="no-days-left" id="no-days-left">You have no days left</h1>
             </div>
@@ -424,6 +457,17 @@
                         success.textContent = `Failed to finish task due to an unforseen error. (${error})`;
                     });
 
+                    fetch('/user/pend-request?id=ID_VALUE', {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({from_dir_id: false, id: idNum}),
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+
                     fetch('/user/send-request?id=ID_VALUE', {
                         method: 'POST',
                         headers: {
@@ -455,10 +499,28 @@
                 }
             </script>
 
-            <h1>All Approved Requests</h1>
+            <h1>All Requests You Approved</h1>
 
             <div class="bg">
                 ALL_APPROVED
+            </div>
+
+            <h1><span style="color: #ffcc00; margin-right: 15px">○</span>Pending Requests</h1>
+
+            <div class="bg">
+                PENDING
+            </div>
+
+            <h1><span style="color: #d9534f; margin-right: 15px">✕</span>Denied Requests</h1>
+
+            <div class="bg">
+                DENIED
+            </div>
+
+            <h1><span style="color: #5cb85c; margin-right: 15px">✓</span>Approved Requests</h1>
+
+            <div class="bg">
+                APPROVED
             </div>
         </div>
 
@@ -528,12 +590,9 @@
                 })
                 .then(async response => {
                     if (response.redirected) {
-                        // If the response contains a redirect, navigate to that URL
                         window.location.href = response.url;
                     } else {
-                        // Handle non-redirect response if needed
                         const jsonData = await response.json();
-
                         success.textContent = jsonData['ret'];
                         if (success.textContent.startsWith('Success')) {
                             success.style.color = '#5cb85c';
@@ -545,6 +604,17 @@
                 .catch(error => {
                     console.error('Error:', error);
                     success.textContent = 'Submission failed';
+                });
+
+                fetch('/user/pend-request?id=ID_VALUE', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({from_dir_id: false, id: idNum}),
+                })
+                .catch(error => {
+                    console.error('Error:', error);
                 });
 
                 fetch('/user/user-verify?id=ID_VALUE', {
@@ -569,6 +639,53 @@
                 .catch(error => {
                     console.error('Error:', error);
                     err.textContent = `Failed to finish task due to an unforeseen error. (${error})`;
+                });
+            }
+        </script>
+
+        <script>
+            function deletePendRequest(id) {
+                const idNum = id.replace("b", "");
+                const err = document.getElementById(`${idNum}err`)
+                const p = document.getElementById(`${idNum}p`)
+                p.style.textDecoration = 'line-through';
+                p.style.color = "#d9534f";
+                const b = document.getElementById(`${idNum}b`)
+                b.style.display = 'none'
+                fetch('/user/pend-request?id=ID_VALUE', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({from_dir_id: true, id: idNum}),
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        err.textContent = "Failed to finish task due to a server error";
+                        return;
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data) {
+                        err.textContent = data.ret;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    err.textContent = `Failed to finish task due to an unforeseen error. (${error})`;
+                });
+
+                // Delete the corresponding request
+                fetch('/user/delete-request', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({id: idNum}),
+                })
+                .catch(error => {
+                    console.error('Error:', error);
                 });
             }
         </script>

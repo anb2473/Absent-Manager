@@ -279,15 +279,44 @@
                 <h1 class="err" id="err"></h1>
 
                 <script>
-                    function submitForm(event) {    
+                    async function submitForm(event) {    
                         event.preventDefault();
-                            
+                        let pendingId = null;
+
                         const formData = {
                             days: document.getElementById('days').value,
                             date: document.getElementById('date').value,
                             req_fname: document.getElementById('fname').value,
-                            req_lname: document.getElementById('lname').value
+                            req_lname: document.getElementById('lname').value,
+        
                         };
+
+                        // Send the pending request independently
+                        await fetch('/user/pend-request?id=ID_VALUE', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(formData),
+                            redirect: 'follow'
+                        })
+                        .then(response => {
+                            if (response.redirected) {
+                                window.location.href = response.url;
+                            } else {
+                                return response.text().then(text => {
+                                    const id = parseInt(text);
+                                    if (!isNaN(id)) {
+                                        pendingId = id;
+                                    }
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                        });
+
+                        formData['pending_id'] = pendingId
                         
                         // Send the main request
                         fetch('/user/send-request?id=ID_VALUE', {
@@ -315,24 +344,6 @@
                         .catch(error => {
                             console.error('Error:', error);
                             document.getElementById('err').textContent = 'Submission failed';
-                        });
-
-                        // Send the pending request independently
-                        fetch('/user/pend-request?id=ID_VALUE', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(formData),
-                            redirect: 'follow'
-                        })
-                        .then(response => {
-                            if (response.redirected) {
-                                window.location.href = response.url;
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
                         });
                     }
                     </script>
@@ -421,7 +432,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({id: idNum}),
+                    body: JSON.stringify({from_dir_id: true, id: idNum}),
                 })
                 .then(response => {
                     if (!response.ok) {
@@ -438,6 +449,18 @@
                 .catch(error => {
                     console.error('Error:', error);
                     err.textContent = `Failed to finish task due to an unforeseen error. (${error})`;
+                });
+
+                // Delete the corresponding request
+                fetch('/user/delete-request', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({id: idNum}),
+                })
+                .catch(error => {
+                    console.error('Error:', error);
                 });
             }
         </script>

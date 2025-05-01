@@ -25,6 +25,7 @@ async function loadFacStaffDashboard(req, res, user, modifiedContent) {
         <div class="request" id="request${row.id}">
             <p id="${row.id}p">${row.name}</p>
             <button id="${row.id}b" class="verify-request" onclick="deleteRequest(this.id)">Delete Request</button>
+            <p id="${row.id}err"></p>
         </div>
         `
     }
@@ -41,6 +42,7 @@ async function loadFacStaffDashboard(req, res, user, modifiedContent) {
         <div class="request" id="request${row.id}">
             <p id="${row.id}p">${row.name}</p>
             <button id="${row.id}b" class="verify-request" onclick="deleteRequest(this.id)">Delete Request</button>
+            <p id="${row.id}err"></p>
         </div>
         `
     }
@@ -57,6 +59,7 @@ async function loadFacStaffDashboard(req, res, user, modifiedContent) {
         <div class="request" id="request${row.id}">
             <p id="${row.id}p">${row.name}</p>
             <button id="${row.id}b" class="verify-request" onclick="deleteRequest(this.id)">Delete Request</button>
+            <p id="${row.id}err"></p>
         </div>
         `
     }
@@ -161,6 +164,7 @@ async function loadSuperDashboard(req, res, user, modifiedContent) {
     }
     modifiedContent = modifiedContent.replaceAll("REQUESTS", replaceText).replaceAll("ID_VALUE", req.userID)
 
+    // Add approved requests (sent to user) section
     replaceText = ""
     const selectAllApprovedRequests = db.prepare(`SELECT * FROM requests WHERE completed = 1 AND userID = ?`);
     const approvedRequests = selectAllApprovedRequests.all(req.userID);
@@ -176,6 +180,60 @@ async function loadSuperDashboard(req, res, user, modifiedContent) {
         replaceText = "No Requests"
     }
     modifiedContent = modifiedContent.replaceAll("ALL_APPROVED", replaceText)
+
+    // Add pending requests section
+    replaceText = ""
+    const selectAllPendingRequests = db.prepare(`SELECT * FROM request_status WHERE userID = ? AND status = 'Pending'`)
+    const pendingRequests = selectAllPendingRequests.all(req.userID);
+    for (const row of pendingRequests) {
+        replaceText += `
+        <div class="request" id="request${row.id}">
+            <p id="${row.id}p">${row.name}</p>
+            <button id="${row.id}b" class="verify-request" onclick="deletePendRequest(this.id)">Delete Request</button>
+            <p id="${row.id}err"></p>
+        </div>
+        `
+    }
+    if (replaceText == "") {
+        replaceText = "No Pending Requests"
+    }
+    modifiedContent = modifiedContent.replaceAll('PENDING', replaceText)
+
+    // Add denied requests section
+    replaceText = ""
+    const selectAllDeniedRequests = db.prepare(`SELECT * FROM request_status WHERE userID = ? AND status = 'Denied'`)
+    const deniedRequests = selectAllDeniedRequests.all(req.userID);
+    for (const row of deniedRequests) {
+        replaceText += `
+        <div class="request" id="request${row.id}">
+            <p id="${row.id}p">${row.name}</p>
+            <button id="${row.id}b" class="verify-request" onclick="deletePendRequest(this.id)">Delete Request</button>
+            <p id="${row.id}err"></p>
+        </div>
+        `
+    }
+    if (replaceText == "") {
+        replaceText = "No Denied Requests"
+    }
+    modifiedContent = modifiedContent.replaceAll('DENIED', replaceText)
+
+    // Add approved requests (sent from user) section
+    replaceText = ""
+    const selectAllReturnedApprovedRequests = db.prepare(`SELECT * FROM request_status WHERE userID = ? AND status = 'Approved'`)
+    const returnedApprovedRequests = selectAllReturnedApprovedRequests.all(req.userID);
+    for (const row of returnedApprovedRequests) {
+        replaceText += `
+        <div class="request" id="request${row.id}">
+            <p id="${row.id}p">${row.name}</p>
+            <button id="${row.id}b" class="verify-request" onclick="deletePendRequest(this.id)">Delete Request</button>
+            <p id="${row.id}err"></p>
+        </div>
+        `
+    }
+    if (replaceText == "") {
+        replaceText = "No Approved Requests"
+    }
+    modifiedContent = modifiedContent.replaceAll('APPROVED', replaceText)
 
     return modifiedContent;
 }
@@ -336,6 +394,7 @@ function handleDaysRequestFromRequests(req, res) {
             id: task['id'],
             days: days,
             date: date,
+            pending_id: task['pending_id']
         }),
         1);
 
@@ -364,14 +423,15 @@ function handleDaysRequest(req, res) {
         message = `Request from ${originalUser.fname} ${originalUser.lname} to take a half day off on ${date}`
         days = 0.5
     }
-    postRequest.run(
+    const result = postRequest.run(
         userID, 
         message, 
         JSON.stringify({
             req: "take_days",
             id: req.userID,
             days: days,
-            date: date
+            date: date,
+            pending_id: req.body['pending_id']
         }));
 
     res.json({ret: "Successfully processed request"})
@@ -390,15 +450,26 @@ router.post('/send-request', async (req, res) => {
 
 router.post('/pend-request', (req, res) => {
     const postRequest = db.prepare(`INSERT INTO request_status (userID, name, status) VALUES (?, ?, ?)`)
-    postRequest.run(req.userID, 
+    const result = postRequest.run(req.userID, 
     `Pending for request to take ${req.body['days']} days off at ${req.body['date']}`, 
     'Pending')
-    res.send(200)
+    res.send(result.lastInsertRowid.toString())
 })
 
 router.delete('/pend-request', (req, res) => {
-    const delRequest = db.prepare(`DELETE FROM request_status WHERE id = ?`)
-    delRequest.run(req.body['id'])
+    if (req.body['from_dir_id']) {
+        const delRequest = db.prepare(`DELETE FROM request_status WHERE id = ? AND userID = ?`)
+        delRequest.run(req.body['id'], req.userID)
+        return res.send(200)
+    }
+
+    const getRequest = db.prepare(`SELECT * FROM requests WHERE id = ?`)
+    const request = getRequest.get((parseInt(req.body['id'])+ 1).toString())
+    const secretCmd = JSON.parse(request.secret_data)
+    const pending_id = secretCmd['pending_id']
+    const id = secretCmd['id']
+    const delRequest = db.prepare(`DELETE FROM request_status WHERE id = ? AND userID = ?`)
+    delRequest.run(pending_id, id)
     res.send(200)
 })
 
