@@ -14,6 +14,7 @@ if (!dbExists) {
             fname TEXT,
             lname TEXT,
             days_left REAL,
+            berievement_days_left REAL,
             user_type TEXT,
             user_view TEXT,
             password TEXT

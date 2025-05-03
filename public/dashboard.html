@@ -258,7 +258,7 @@
     <header>
         <div class="items">
             <h1 class="name"><i>Hello,<span><br>NAME (ROLE)</span></i></h1>
-            <h1 class="days-left">Not Available<span><br>days left</span></h1>
+            <h1 class="days-left">DAYS, BERIEVEMENT DAYS<span><br>days left</span></h1>
         </div>
     </header>
 
@@ -273,6 +273,12 @@
                     <label for="supervisor">Supervisor:</label>
                     <input type="fname" id="fname" name="fname">
                     <input type="lname" id="lname" name="lname">
+                    <select name="type" id="type">
+                        <option value="jury duty days">Jury Duty</option>
+                        <option value="berievement days">Berievment</option>
+                        <option value="professional days">Professional Days</option>
+                        <option value="other">Other</option>
+                    </select>
                     <input type="submit" value="Submit">
                 </form>
 
@@ -288,7 +294,7 @@
                             date: document.getElementById('date').value,
                             req_fname: document.getElementById('fname').value,
                             req_lname: document.getElementById('lname').value,
-        
+                            type: document.getElementById('type').value
                         };
 
                         // Send the pending request independently

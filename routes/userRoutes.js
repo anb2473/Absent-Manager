@@ -15,7 +15,7 @@ async function loadFacStaffDashboard(req, res, user, modifiedContent) {
     const filePath = path.join(__dirname, 'public', 'dashboard.html')
     const fileContent = await fs.readFile(filePath, 'utf8');
 
-    modifiedContent = fileContent.replaceAll('Not Available', user.days_left).replaceAll("NAME", user.fname).replaceAll("ROLE", user.user_type).replaceAll("ID_VALUE", req.userID);
+    modifiedContent = fileContent.replaceAll('BERIEVEMENT DAYS', user.berievement_days_left).replaceAll("NAME", user.fname).replaceAll('DAYS', user.days_left).replaceAll("ROLE", user.user_type).replaceAll("ID_VALUE", req.userID);
 
     let replaceText = ""
     const selectAllPendingRequests = db.prepare(`SELECT * FROM request_status WHERE userID = ? AND status = 'Pending'`)
@@ -75,7 +75,7 @@ async function loadHRDashboard(req, res, user, modifiedContent) {
     const filePath = path.join(__dirname, 'public', 'hr-dashboard.html')
     const fileContent = await fs.readFile(filePath, 'utf8');
 
-    modifiedContent = fileContent.replaceAll('Not Available', user.days_left).replaceAll("NAME", user.fname);
+    modifiedContent = fileContent.replaceAll('DAYS', user.days_left).replaceAll("NAME", user.fname);
 
     let replaceText = ""
     modifiedContent = modifiedContent.replaceAll("ID_VALUE", req.userID)
@@ -146,7 +146,7 @@ async function loadSuperDashboard(req, res, user, modifiedContent) {
     const filePath = path.join(__dirname, 'public', 'super-dashboard.html')
     const fileContent = await fs.readFile(filePath, 'utf8');
 
-    modifiedContent = fileContent.replaceAll('Not Available', user.days_left).replaceAll("NAME", user.fname).replaceAll("ROLE", user.user_type);
+    modifiedContent = fileContent.replaceAll('BERIEVEMENT DAYS', user.berievement_days_left).replaceAll('DAYS', user.days_left).replaceAll("NAME", user.fname).replaceAll("ROLE", user.user_type);
 
     let replaceText = ""
     const selectAllRequests = db.prepare(`SELECT * FROM requests WHERE completed = 0 AND userID = ?`);
@@ -277,21 +277,41 @@ function verifyDays(req, res) {
     }
 
     if (secretCmd['req'] == 'take_days') {
-        const decreaseDays = db.prepare(`UPDATE users SET days_left = ? WHERE id = ?`);
         const getUser = db.prepare(`SELECT * FROM users WHERE id = ?`);
         const user = getUser.get(secretCmd['id']);
-        const days_left = user.days_left;
-        let new_days = NaN;
-        if (days_left < 0) {
-            return res.json({ret: "Cannot take negative days off"})
+
+        if (secretCmd['type'] == 'berievement days') {
+            const days_left = user.berievement_days_left;
+            let new_days = NaN;
+            if (days_left < 0) {
+                return res.json({ret: "Cannot take negative days off"})
+            }
+            if (days_left - parseFloat(secretCmd['days']) >= 0) {
+                new_days = days_left - parseFloat(secretCmd['days']);
+            }
+            else {
+                return res.json({ret: "User does not have enough days left"})
+            }
+
+            const berievementDays = db.prepare(`UPDATE users SET berievement_days_left = ? WHERE id = ?`);
+            berievementDays.run(new_days, secretCmd['id']);
         }
-        if (days_left - parseFloat(secretCmd['days']) >= 0) {
-            new_days = days_left - parseFloat(secretCmd['days']);
+        else if (secretCmd['type'] != 'jury duty days' && secretCmd['type'] != 'professional days') {
+            const days_left = user.days_left;
+            let new_days = NaN;
+            if (days_left < 0) {
+                return res.json({ret: "Cannot take negative days off"})
+            }
+            if (days_left - parseFloat(secretCmd['days']) >= 0) {
+                new_days = days_left - parseFloat(secretCmd['days']);
+            }
+            else {
+                return res.json({ret: "User does not have enough days left"})
+            }
+
+            const decreaseDays = db.prepare(`UPDATE users SET days_left = ? WHERE id = ?`);
+            decreaseDays.run(new_days, secretCmd['id']);
         }
-        else {
-            return res.json({ret: "User does not have enough days left"})
-        }
-        decreaseDays.run(new_days, secretCmd['id']);
     }
 
     const removeTask = db.prepare(`UPDATE requests SET completed = 1 WHERE id = ? AND userID = ?`)
@@ -306,33 +326,36 @@ function handleUsers(req, res) {
     switch (secretCmd['req']) {
         case 'gen_user':
             const days_left_policy = {
-                'Faculty': 8,
-                'Support Staff': 23,
-                'Professional Staff':28,
-                'Admin': 33
+                'Faculty': [8, 3],
+                'Support Staff': [23, 3],
+                'Professional Staff': [28, 3],
+                'Admin': [33, 3]
             }
         
-            const gen_user = db.prepare('INSERT INTO users (fname, lname, password, days_left, user_type, user_view) VALUES (?, ?, ?, ?, ?, ?)')
+            const gen_user = db.prepare('INSERT INTO users (fname, lname, password, days_left, berievement_days_left, user_type, user_view) VALUES (?, ?, ?, ?, ?, ?, ?)')
             const usertype = secretCmd['usertype']
             const userview = secretCmd['userview']
-            let policy = "No Policy"
+            let policy = [NaN, NaN]
             try {
                 policy = days_left_policy[usertype]
             }
             catch (error) { console.log(error) }
             gen_user.run(
                 secretCmd['fname'], secretCmd['lname'], secretCmd['password'], 
-                policy, usertype, userview)
+                policy[0], policy[1], usertype, userview)
             break;
             
         case 'del_user':
-            const del_user = db.prepare('DELETE FROM users WHERE id = ?')
             const del_user_requests = db.prepare('DELETE FROM requests WHERE userID = ?')
+            const del_user_status = db.prepare('DELETE FROM request_status WHERE userID = ?')
+            const del_user = db.prepare('DELETE FROM users WHERE id = ?')
             try {
+                // First delete all related records
                 del_user_requests.run(secretCmd['userID'])
+                del_user_status.run(secretCmd['userID'])
+                // Then delete the user
                 del_user.run(secretCmd['userID'])
-            }
-            catch (error) { 
+            } catch (error) { 
                 console.log(error) 
                 res.json({ret: `Failed to delete user ${secretCmd['userID']}`})
             }
@@ -370,6 +393,7 @@ function handleDaysRequestFromRequests(req, res) {
     const task = JSON.parse(taskData['secret_data'])
     const days = task['days']
     const date = task['date']
+    const type = task['type']
     const getUser = db.prepare(`SELECT * FROM users WHERE fname = ? AND lname = ?`)
     const user = getUser.get('HR', 'user');
     if (user == undefined) {
@@ -381,9 +405,9 @@ function handleDaysRequestFromRequests(req, res) {
     const originalUser = getUserById.get(task['id'])
     
     const postRequest = db.prepare(`INSERT INTO requests (userID, name, secret_data, completed) VALUES (?, ?, ?, ?)`)
-    let message = `Request from ${originalUser.fname} ${originalUser.lname} to take ${days} days off starting from ${date}`;
+    let message = `Request from ${originalUser.fname} ${originalUser.lname} to take ${days} ${type} off starting from ${date}`;
     if (days == 0.5) {
-        message = `Request from ${originalUser.fname} ${originalUser.lname} to take a half day off on ${date}`
+        message = `Request from ${originalUser.fname} ${originalUser.lname} to take a half ${type} off on ${date}`
     }
 
     postRequest.run(
@@ -394,7 +418,8 @@ function handleDaysRequestFromRequests(req, res) {
             id: task['id'],
             days: days,
             date: date,
-            pending_id: task['pending_id']
+            pending_id: task['pending_id'],
+            type: type
         }),
         1);
 
@@ -405,7 +430,7 @@ function handleDaysRequestFromRequests(req, res) {
 }
 
 function handleDaysRequest(req, res) {
-    let {days, date, req_fname, req_lname} = req.body
+    let {days, date, req_fname, req_lname, type} = req.body
 
     const getUser = db.prepare(`SELECT * FROM users WHERE fname = ? AND lname = ?`)
     const user = getUser.get(req_fname, req_lname);
@@ -418,9 +443,9 @@ function handleDaysRequest(req, res) {
     const originalUser = getUserById.get(req.userID)
     
     const postRequest = db.prepare(`INSERT INTO requests (userID, name, secret_data) VALUES (?, ?, ?)`)
-    let message = `Request from ${originalUser.fname} ${originalUser.lname} to take ${days} days off starting from ${date}`;
+    let message = `Request from ${originalUser.fname} ${originalUser.lname} to take ${days} ${type.toLowerCase().replace("other", "days")} off starting from ${date}`;
     if (days == 'half') {
-        message = `Request from ${originalUser.fname} ${originalUser.lname} to take a half day off on ${date}`
+        message = `Request from ${originalUser.fname} ${originalUser.lname} to take a half ${type.toLowerCase().replace("other", "days").slice(0, -1)} off on ${date}`
         days = 0.5
     }
     const result = postRequest.run(
@@ -431,7 +456,8 @@ function handleDaysRequest(req, res) {
             id: req.userID,
             days: days,
             date: date,
-            pending_id: req.body['pending_id']
+            pending_id: req.body['pending_id'],
+            type: type.toLowerCase().replace("other", "days")
         }));
 
     res.json({ret: "Successfully processed request"})
@@ -451,7 +477,7 @@ router.post('/send-request', async (req, res) => {
 router.post('/pend-request', (req, res) => {
     const postRequest = db.prepare(`INSERT INTO request_status (userID, name, status) VALUES (?, ?, ?)`)
     const result = postRequest.run(req.userID, 
-    `Pending for request to take ${req.body['days']} days off at ${req.body['date']}`, 
+    `Pending for request to take ${req.body['days']} ${req.body['days'] === 'half' ? req.body['type'].toLowerCase().replace("option", "days").slice(0, -1) : req.body['type'].toLowerCase().replace("option", "days")} off at ${req.body['date']}`, 
     'Pending')
     res.send(result.lastInsertRowid.toString())
 })
