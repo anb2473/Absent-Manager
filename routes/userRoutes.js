@@ -112,7 +112,8 @@ async function loadHRDashboard(req, res, user, modifiedContent) {
                     Supervisor
                 </label><br>
                 <label for="n${row.id}days">Days left:</label>
-                <input type="number" step="any" value="${row.days_left}" id="n${row.id}days" class="usertype">
+                <input type="number" step="any" value="${row.days_left}" id="n${row.id}days" class="usertype"><br><br>
+                <input type="number" step="any" value="${row.berievement_days_left}" id="n${row.id}berievement_days" class="usertype"><br><br>
                 <input type="submit" value="Submit">
             </form>
             `
@@ -362,8 +363,8 @@ function handleUsers(req, res) {
             break;
             
         case 'put_user':
-            const update_user = db.prepare('UPDATE users SET fname = ?, lname = ?, password = ?, user_type = ?, user_view = ?, days_left = ? WHERE id = ?')
-            update_user.run(secretCmd['fname'], secretCmd['lname'], secretCmd['password'], secretCmd['usertype'], secretCmd['userview'], secretCmd['days_left'], secretCmd['userID'])
+            const update_user = db.prepare('UPDATE users SET fname = ?, lname = ?, password = ?, user_type = ?, user_view = ?, days_left = ?, berievement_days_left = ? WHERE id = ?')
+            update_user.run(secretCmd['fname'], secretCmd['lname'], secretCmd['password'], secretCmd['usertype'], secretCmd['userview'], secretCmd['days_left'], secretCmd['berievement_days_left'], secretCmd['userID'])
             res.json({ret: "Successfully updated user"})
             break;
         case 'del_req':

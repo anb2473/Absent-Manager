@@ -273,11 +273,16 @@
                     <label for="supervisor">Supervisor:</label>
                     <input type="fname" id="fname" name="fname">
                     <input type="lname" id="lname" name="lname">
+                    <select name="type" id="type">
+                        <option value="other">Other</option>
+                        <option value="jury duty days">Jury Duty</option>
+                        <option value="berievement days">Berievment</option>
+                        <option value="professional days">Professional Days</option>
+                    </select>
                     <input type="submit" value="Submit">
                 </form>
 
                 <h1 class="err" id="err"></h1>
-
 
                 <script>
                     async function submitForm(event) {    
@@ -289,7 +294,7 @@
                             date: document.getElementById('date').value,
                             req_fname: document.getElementById('fname').value,
                             req_lname: document.getElementById('lname').value,
-        
+                            type: document.getElementById('type').value
                         };
 
                         // Send the pending request independently
@@ -347,7 +352,7 @@
                             document.getElementById('err').textContent = 'Submission failed';
                         });
                     }
-                </script>
+                    </script>
 
                 <h1 class="no-days-left" id="no-days-left">You have no days left</h1>
             </div>

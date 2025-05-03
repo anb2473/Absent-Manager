@@ -289,10 +289,10 @@
                     function toggleForm(id) {
                         const form = document.getElementById(`${id}form`);
                         
-                        if (form.style.height === '100vh') {
+                        if (form.style.height === '120vh') {
                             form.style.height = '0';
                         } else {
-                            form.style.height = '100vh';
+                            form.style.height = '120vh';
                         }
                     }
                     
@@ -311,6 +311,7 @@
                             password: form.querySelector(`#n${id}password`).value,
                             usertype: form.querySelector(`#n${id}usertype`).value,
                             days_left: form.querySelector(`#n${id}days`).value,
+                            berievement_days_left: form.querySelector(`#n${id}berievement_days`).value,
                             userview: form.querySelector(`#n${id}userview`).checked ? 'Supervisor' : 'Normal',
                             userID: id
                         };
