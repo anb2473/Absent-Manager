@@ -1,5 +1,8 @@
 import jwt from 'jsonwebtoken';
 
+import dotenv from 'dotenv';
+dotenv.config();
+
 function authMiddleware(req, res, next) {
     // Token stored in cookies, id stored in query params
     const token = req.cookies.authToken;

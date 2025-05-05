@@ -289,10 +289,10 @@
                     function toggleForm(id) {
                         const form = document.getElementById(`${id}form`);
                         
-                        if (form.style.height === '120vh') {
+                        if (form.style.height === '140vh') {
                             form.style.height = '0';
                         } else {
-                            form.style.height = '120vh';
+                            form.style.height = '140vh';
                         }
                     }
                     
@@ -313,6 +313,7 @@
                             days_left: form.querySelector(`#n${id}days`).value,
                             berievement_days_left: form.querySelector(`#n${id}berievement_days`).value,
                             userview: form.querySelector(`#n${id}userview`).checked ? 'Supervisor' : 'Normal',
+                            email: form.querySelector(`#n${id}email`).value,
                             userID: id
                         };
                         
@@ -353,6 +354,8 @@
                     <input type="text" id="lname" name="lname"><br><br>
                     <label for="password">Password:</label><br>
                     <input type="text" id="password" name="password"><br><br>
+                    <label for="email">Email:</label><br>
+                    <input type="text" id="email" name="email"><br><br>
                     <label for="usertype">User type:</label>
                     <select name="usertype" id="usertype">
                         <option value="Faculty">Faculty</option>
@@ -377,7 +380,8 @@
                             lname: document.getElementById('lname').value,
                             password: document.getElementById('password').value,
                             usertype: document.getElementById('usertype').value,
-                            userview: document.getElementById('userview').checked ? 'Supervisor' : 'Normal'
+                            userview: document.getElementById('userview').checked ? 'Supervisor' : 'Normal',
+                            email: document.getElementById('email').value
                         };
                         
                         fetch('/user/user-verify?id=ID_VALUE', {

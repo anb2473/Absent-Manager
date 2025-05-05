@@ -5,8 +5,8 @@ JWT_SECRET="change_for_production"
 HR_FNAME="HR"
 HR_LNAME="user"
 HR_PASSWORD="password"
-HR_EMAIL="austinnabilblass@gmail.com"
-HR_EMAIL_PASSWORD="ablass123123123"
+HR_EMAIL="hr@gmail.com"
+HR_EMAIL_PASSWORD="password"
 
 EMAIL_PROVIDER="Gmail"
 

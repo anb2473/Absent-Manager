@@ -3,8 +3,26 @@ import db from '../db.js';
 import {fileURLToPath} from 'url';
 import path, {dirname} from 'path';
 import fs from 'fs/promises';
+import nodemailer from 'nodemailer';
+
+import dotenv from 'dotenv';
+dotenv.config();
 
 const router = express.Router();
+
+const transporter = nodemailer.createTransport({
+    service: process.env.EMAIL_PROVIDER ||'Gmail',
+    auth: {  // This is the address that will send off the emails
+        user: process.env.HR_EMAIL || 'hr@gmail.com',
+        pass: process.env.HR_EMAIL_PASSWORD || 'password'
+    }
+})
+
+const mailOptions = {
+    from: process.env.HR_EMAIL || 'hr@example.com',
+    subject: process.env.EMAIL_SUBJECT || 'Request From the Absent Tracker',
+    text: process.env.EMAIL_TEXT || 'You have recieved a new request from the Absent Tracker. Go to your account here: http://localhost:3000/auth/login',
+}
 
 // Locate of module
 const __filename = fileURLToPath(import.meta.url);
@@ -84,7 +102,7 @@ async function loadHRDashboard(req, res, user, modifiedContent) {
     const selectAllUsers = db.prepare(`SELECT * FROM users`);
     const users = selectAllUsers.all();
     for (const row of users) {
-        if (row.fname != 'HR' && row.lname != 'user') {
+        if (row.fname != 'HR' || row.lname != 'user') {
             replaceText += `
             <p id="${row.id}err" style="color: #d9534f; font-size: 15px; justify-self: center;"></p>
             <div class="request" id="request${row.id}">
@@ -100,6 +118,8 @@ async function loadHRDashboard(req, res, user, modifiedContent) {
                 <input type="text" id="n${row.id}lname" name="lname" value="${row.lname}"><br><br>
                 <label for="n${row.id}password">Password:</label><br>
                 <input type="text" id="n${row.id}password" name="password" value="${row.password}"><br><br>
+                <label for="n${row.id}email">Email:</label><br>
+                <input type="text" id="n${row.id}email" name="email" value="${row.email}"><br><br>
                 <label for="n${row.id}usertype">User type:</label>
                 <select name="usertype" id="n${row.id}usertype" class="usertype">
                     <option value="Faculty" ${row.user_type === 'Faculty' ? 'selected' : ''}>Faculty</option>
@@ -247,6 +267,12 @@ router.get('/dashboard', async (req, res) => {
     const getUser = db.prepare(`SELECT * FROM users WHERE id = ?`)
     const user = getUser.get(req.userID)
 
+    if (user == undefined) {
+        const filePath = path.join(__dirname, 'public', 'unf.html')
+        const fileContent = await fs.readFile(filePath, 'utf8');
+        return res.send(fileContent)
+    }
+
     let modifiedContent = "500";
     if (user.user_view != 'HR' && user.user_view != 'Supervisor') {
         modifiedContent = await loadFacStaffDashboard(req, res, user, modifiedContent)
@@ -325,7 +351,7 @@ function handleUsers(req, res) {
     const secretCmd = req.body;
 
     switch (secretCmd['req']) {
-        case 'gen_user':
+        case 'gen_user': 
             const days_left_policy = {
                 'Faculty': [8, 3],
                 'Support Staff': [23, 3],
@@ -333,9 +359,10 @@ function handleUsers(req, res) {
                 'Admin': [33, 3]
             }
         
-            const gen_user = db.prepare('INSERT INTO users (fname, lname, password, days_left, berievement_days_left, user_type, user_view) VALUES (?, ?, ?, ?, ?, ?, ?)')
+            const gen_user = db.prepare('INSERT INTO users (fname, lname, password, days_left, berievement_days_left, user_type, user_view, email) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
             const usertype = secretCmd['usertype']
             const userview = secretCmd['userview']
+            const email = secretCmd['email']
             let policy = [NaN, NaN]
             try {
                 policy = days_left_policy[usertype]
@@ -343,7 +370,7 @@ function handleUsers(req, res) {
             catch (error) { console.log(error) }
             gen_user.run(
                 secretCmd['fname'], secretCmd['lname'], secretCmd['password'], 
-                policy[0], policy[1], usertype, userview)
+                policy[0], policy[1], usertype, userview, email)
             break;
             
         case 'del_user':
@@ -363,8 +390,8 @@ function handleUsers(req, res) {
             break;
             
         case 'put_user':
-            const update_user = db.prepare('UPDATE users SET fname = ?, lname = ?, password = ?, user_type = ?, user_view = ?, days_left = ?, berievement_days_left = ? WHERE id = ?')
-            update_user.run(secretCmd['fname'], secretCmd['lname'], secretCmd['password'], secretCmd['usertype'], secretCmd['userview'], secretCmd['days_left'], secretCmd['berievement_days_left'], secretCmd['userID'])
+            const update_user = db.prepare('UPDATE users SET fname = ?, lname = ?, password = ?, user_type = ?, user_view = ?, days_left = ?, berievement_days_left = ?, email = ? WHERE id = ?')
+            update_user.run(secretCmd['fname'], secretCmd['lname'], secretCmd['password'], secretCmd['usertype'], secretCmd['userview'], secretCmd['days_left'], secretCmd['berievement_days_left'], secretCmd['email'], secretCmd['userID'])
             res.json({ret: "Successfully updated user"})
             break;
         case 'del_req':
@@ -400,6 +427,16 @@ function handleDaysRequestFromRequests(req, res) {
     if (user == undefined) {
         return res.json({ret: "Invalid supervisor, please check the name"})
     }
+
+    const email = user.email
+    const mailOption = mailOptions
+    mailOption.to = email
+    transporter.sendMail(mailOption, (error, info) => {
+        if (error) {
+            console.log("Error sending email: ", error)
+        }
+    })
+
     const userID = user.id
 
     const getUserById = db.prepare(`SELECT * FROM users WHERE id = ?`)
@@ -438,6 +475,16 @@ function handleDaysRequest(req, res) {
     if (user == undefined) {
         return res.json({ret: "Invalid supervisor, please check the name"})
     }
+
+    const email = user.email
+    const mailOption = mailOptions
+    mailOption.to = email
+    transporter.sendMail(mailOption, (error, info) => {
+        if (error) {
+            console.log("Error sending email: ", error)
+        }
+    })
+
     const userID = user.id
 
     const getUserById = db.prepare(`SELECT * FROM users WHERE id = ?`)
@@ -478,7 +525,7 @@ router.post('/send-request', async (req, res) => {
 router.post('/pend-request', (req, res) => {
     const postRequest = db.prepare(`INSERT INTO request_status (userID, name, status) VALUES (?, ?, ?)`)
     const result = postRequest.run(req.userID, 
-    `Pending for request to take ${req.body['days']} ${req.body['days'] === 'half' ? req.body['type'].toLowerCase().replace("option", "days").slice(0, -1) : req.body['type'].toLowerCase().replace("option", "days")} off at ${req.body['date']}`, 
+    `Pending for request to take ${req.body['days']} ${req.body['days'] === 'half' ? req.body['type'].toLowerCase().replace("other", "days").slice(0, -1) : req.body['type'].toLowerCase().replace("other", "days")} off at ${req.body['date']}`, 
     'Pending')
     res.send(result.lastInsertRowid.toString())
 })
@@ -509,6 +556,16 @@ router.put('/pend-request', (req, res) => {
     const insertRequest = db.prepare(`INSERT INTO request_status (userID, name, status) VALUES (?, ?, ?)`)
     insertRequest.run(userID, req.body['name'].replace("Request", `${req.body['status']} request`), req.body['status'])
     res.send(200)
+    const getUser = db.prepare(`SELECT * FROM users WHERE id = ?`)
+    const user = getUser.get(userID)
+    const email = user.email
+    const mailOption = mailOptions
+    mailOption.to = email
+    transporter.sendMail(mailOption, (error, info) => {
+        if (error) {
+            console.log("Error sending email: ", error)
+        }
+    })
 })
 
 export default router;

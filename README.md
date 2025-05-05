@@ -26,10 +26,13 @@
 
 The product is designed for ease of use. As such, usage is very simple and highly optimized:
 
-* You can go to the `.env` file, and you should see the variables:
+* You can go to the `test env` file, quickly rename this file to `.env` before proceeding, and you should see the variables:
     1. HR_FNAME
     2. HR_LNAME
     3. HR_PASSWORD
+    4. HR_EMAIL
+    5. HR_EMAIL_PASSWORD
+    6. EMAIL_PROVIDER
 * Edit these before execution to set the HR credentials (**NOTE:** If you run the system before setting these, you should be able to access a user setting menu in the dashboard allowing you to edit the HR account variables, however you can also stop the system, delete the `database.sqlite` file, and restart the system. **WARNING:** Restarting the system is dangerous, and will remove all user data)
 * When running, the system will print out a link in the terminal. Click that link to access the website
 * Once open, type your HR credentials to access the HR account
